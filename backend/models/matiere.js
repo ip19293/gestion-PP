@@ -9,10 +9,7 @@ const matiereSchema = mongoose.Schema(
       unique: true,
       trim: true,
     },
-    description: {
-      type: String,
-      default: "",
-    },
+
     categorie: {
       type: mongoose.Schema.ObjectId,
       ref: "Categorie",
@@ -30,29 +27,25 @@ const matiereSchema = mongoose.Schema(
   }
 );
 matiereSchema.pre("save", async function (next) {
-  let nb = await this.constructor.find({ categorie: this.categorie }).count();
-  let all_matieres = await this.constructor.find({
-    categorie: this.categorie,
-  });
+  let numeroArray = await this.constructor
+    .find({
+      categorie: this.categorie,
+    })
+    .distinct("numero");
 
-  for ([index, x] of all_matieres.entries()) {
-    console.log(
-      `numero:${x.numero}=>index:${index}---------------------------`
-    );
-    if (x.numero != index) {
-      console.log(
-        `numero:${x.numero}=>index:${index}=============================`
-      );
-      this.numero = index;
-    }
-  }
-  if (this.numero == undefined) {
-    console.log(nb + "=====================");
-    this.numero = nb;
-  }
+  let nb = getNonExistingNumber(numeroArray);
+  this.numero = nb;
 
   next();
 });
+const getNonExistingNumber = function (arr) {
+  for (let i = 0; i <= arr.length; i++) {
+    if (!arr.includes(i)) {
+      return i;
+    }
+  }
+  return arr.length + 1;
+};
 matiereSchema.post("findOneAndDelete", async function (matiere) {
   console.log(" matiere remove midleweere work ....................");
   const Cours = require("./cours");
@@ -90,7 +83,7 @@ matiereSchema.pre("validate", async function (next) {
   try {
     const existingDoc = await mongoose.model("Matiere").findOne({
       categorie: this.categorie,
-      numero: this.numero,
+      name: this.name,
     });
     if (existingDoc && !existingDoc._id.equals(this._id)) {
       return next(
