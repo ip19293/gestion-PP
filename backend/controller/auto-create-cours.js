@@ -15,7 +15,7 @@ const createCoursFromGroupEmplois = async () => {
   const day = date.getDay();
   console.log(day);
   let result = {
-    status: "success",
+    status: "succés",
     message: "",
     day: day,
     emplois: [],
@@ -38,13 +38,15 @@ const createCoursFromGroupEmplois = async () => {
   });
 
   if (emplois.length == 0) {
-    result.message = "No cours created from emploi today ..." + result.message;
+    result.message =
+      "Aucun cours creaté aujourd'hui appartir d'emploi du temps ." +
+      result.message;
   } else {
     if (emplois.length != 0 && list_cours_day.length == 0) {
       for (x of emplois) {
         list_will_added.push(x);
       }
-      result.message = `Successfully created ${emplois.length} cours from emploi du temp ...`;
+      result.message = `succés de création de ${emplois.length} cours appartir d'emploi du temps aujourd'hui .`;
     } else {
       for (x of emplois) {
         const cours_list = await Cours.find({
@@ -72,12 +74,12 @@ const createCoursFromGroupEmplois = async () => {
         });
         added_cours.push(cours);
       }
-      result.message = `Successfully created ${list_will_added.length} cours from emploi du temp ...`;
+      result.message = `succés de création de ${list_will_added.length} cours appartir d'emploi du temps aujourd'hui .`;
     }
     if (list_cannot_added.length != 0) {
       result.message =
         result.message +
-        ` We have ${list_cannot_added.length} emplois today cannot create cours from ...`;
+        ` Nous avons ${list_cannot_added.length} element d'emploi du temps peut etre ajouter comme nouvaux cours .`;
     }
   }
   result.emplois = emplois;
@@ -109,7 +111,7 @@ cron.schedule(
 exports.auto = async (req, res, next) => {
   const result = await createCoursFromGroupEmplois();
   res.status(200).json({
-    status: "success",
+    status: "succés",
     message: result.message,
     emplois_to_day: result.emplois,
     list_will_added: result.list_will_added,

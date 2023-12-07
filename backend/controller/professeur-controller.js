@@ -17,17 +17,18 @@ exports.getProfesseurs = catchAsync(async (req, res, next) => {
   const professeurs_list = await features.query;
   let professeurs = [];
   for (x of professeurs_list) {
-    let prof_info = await x.getInformation();
+    let prof_paiement_info = await x.getPaiementInfo();
     let data = {
-      _id: prof_info[0],
-      nom: prof_info[1],
-      prenom: prof_info[2],
-      email: prof_info[3],
-      mobile: prof_info[4],
-      nbh: prof_info[5],
-      th: prof_info[6],
-      nbc: prof_info[7],
-      somme: prof_info[8],
+      _id: prof_paiement_info[0],
+      nomComplet: prof_paiement_info[1],
+      email: prof_paiement_info[2],
+      mobile: prof_paiement_info[3],
+      banque: prof_paiement_info[4],
+      accountNumero: prof_paiement_info[5],
+      nbh: prof_paiement_info[6],
+      th: prof_paiement_info[7],
+      nbc: prof_paiement_info[8],
+      somme: prof_paiement_info[9],
     };
     professeurs.push(data);
   }
@@ -49,11 +50,12 @@ exports.deleteAllProfesseurs = catchAsync(async (req, res, next) => {
 exports.addProfesseur = catchAsync(async (req, res, next) => {
   const data = req.body;
   let professeur = new Professeur({
-    nom: req.body.nom,
-    prenom: req.body.prenom,
+    nomComplet: req.body.nomComplet,
     mobile: req.body.mobile,
     email: req.body.email,
     matieres: req.body.matieres,
+    banque: req.body.banque,
+    accountNumero: req.body.accountNumero,
   });
   professeur = await professeur.save();
   res.status(200).json({
@@ -194,12 +196,7 @@ exports.getProfesseurEmail = catchAsync(async (req, res, next) => {
   const email = req.params.email;
   const professeur = await Professeur.findOne({
     email: email,
-  }).populate([
-    {
-      path: "matieres",
-      populate: { path: "categorie" },
-    },
-  ]);
+  });
   if (!professeur) {
     return next(new AppError("No professeur found with that EMAIL", 404));
   }

@@ -19,7 +19,7 @@ exports.getEmplois = catchAsync(async (req, res, next) => {
   const emplois = await features.query;
   // const data = functions.emploi_respone(emploi);
   res.status(200).json({
-    status: "success",
+    status: "succés",
     emplois,
   });
 });
@@ -28,57 +28,49 @@ exports.getEmploiById = catchAsync(async (req, res, next) => {
   const id = req.params.id;
   const emploi = await Emploi.findById(id);
   if (!emploi) {
-    return next(new AppError("No emploi found with that ID", 404));
+    return next(
+      new AppError("Aucun emploi trouvé avec cet identifiant !", 404)
+    );
   }
   res.status(200).json({
-    status: "success",
+    status: "succés",
     emploi,
   });
 });
-/* ============================================================FONCTION ============================== */
-const cour_types_TO_th_nbh_nbm_thsm = (cour_types) => {
-  let th = 0;
-  let nbh = 0;
-  let nbm = 0;
-  let thsm = 0;
-  cour_types.forEach((e) => {
-    if (e.name == "CM") {
-      th = th + e.nbh;
-    }
-    if (e.name == "TD" || e.name == "TP") {
-      th = th + (e.nbh * 2) / 3;
-    }
-    thsm = th + thsm;
-    nbh = nbh + e.nbh;
-  });
-  nbm = (nbh % 1) * 60;
 
-  return [th, nbh, nbm, thsm];
-};
 /* ==============================================================ADD EMPLOI============================== */
 exports.addEmploi = catchAsync(async (req, res, next) => {
   const professeur = await Professeur.findById(req.body.professeur);
   const matiere = await Matiere.findById(req.body.matiere);
   const group = await Group.findById(req.body.group);
   if (!professeur) {
-    return next(new AppError("No professeur found with that ID", 404));
+    return next(
+      new AppError("Aucun enseignant trouvé avec cet identifiant !", 404)
+    );
   }
   if (!group) {
-    return next(new AppError("No group found with that ID", 404));
+    return next(
+      new AppError("Aucun groupe trouvé avec cet identifiant !", 404)
+    );
   }
   if (!matiere) {
-    return next(new AppError("No matiere found with that ID", 404));
+    return next(
+      new AppError("Aucun matiére trouvé avec cet identifiant !", 404)
+    );
   }
   if (!professeur.matieres.includes(matiere._id)) {
     return next(
-      new AppError("The matiere is not in the list of this professeur ...", 404)
+      new AppError(
+        "Aucun matiére dans la liste de ce enseignant trouvé avec cet identifiant !",
+        404
+      )
     );
   }
   const emplois_day = await Emploi.find({
     dayNumero: req.body.dayNumero,
     group: req.body.group,
   });
-  const result = VERIFICATION(req.body, emplois_day);
+  const result = VERIFICATION(req.body, emplois_day, "groupe");
 
   if (result[0] == "failed") {
     console.log(result[0]);
@@ -96,8 +88,8 @@ exports.addEmploi = catchAsync(async (req, res, next) => {
   });
   emploi = await emploi.save();
   res.status(201).json({
-    status: "success",
-    message: `Successfully created emploi ...`,
+    status: "succés",
+    message: `L'emploi ajouté avec succés .`,
     emploi,
   });
 });
@@ -109,28 +101,39 @@ exports.updateEmploi = async (req, res, next) => {
   const group = await Group.findById(req.body.group);
   const emploi = await Emploi.findById(id);
   if (!emploi) {
-    return next(new AppError("No emploi found with that ID", 404));
+    return next(
+      new AppError("Aucun emploi trouvé avec cet identifiant !", 404)
+    );
   }
   if (!professeur) {
-    return next(new AppError("No professeur found with that ID", 404));
+    return next(
+      new AppError("Aucun enseignant trouvé avec cet identifiant !", 404)
+    );
   }
   if (!group) {
-    return next(new AppError("No group found with that ID", 404));
+    return next(
+      new AppError("Aucun groupe trouvé avec cet identifiant !", 404)
+    );
   }
   if (!matiere) {
-    return next(new AppError("No matiere found with that ID", 404));
+    return next(
+      new AppError("Aucun matiére trouvé avec cet identifiant !", 404)
+    );
   }
   if (!professeur.matieres.includes(matiere._id)) {
     return next(
-      new AppError("The matiere is not in the list of this professeur ...", 404)
+      new AppError(
+        "Aucun matiére dans la liste de ce enseignant trouvé avec cet identifiant !",
+        404
+      )
     );
   }
   const emplois_day = await Emploi.find({
     _id: { $ne: id },
     dayNumero: req.body.dayNumero,
-    professeur: req.body.professeur,
+    group: req.body.group,
   });
-  const result = VERIFICATION(req.body, emplois_day);
+  const result = VERIFICATION(req.body, emplois_day, "groupe");
 
   if (result[0] == "failed") {
     console.log(result[0]);
@@ -146,7 +149,8 @@ exports.updateEmploi = async (req, res, next) => {
   await emploi.save();
 
   res.status(200).json({
-    status: "success",
+    status: "succés",
+    message: `Emploi modifié avec succés .`,
     emploi,
   });
 };
@@ -155,11 +159,13 @@ exports.deleteEmploi = catchAsync(async (req, res, next) => {
   const id = req.params.id;
   const emploi = await Emploi.findByIdAndDelete(id);
   if (!emploi) {
-    return next(new AppError("No emploi found with that ID", 404));
+    return next(
+      new AppError("Aucun emploi trouvé avec cet identifiant !", 404)
+    );
   }
   res.status(200).json({
-    status: "success",
-    message: "emploi ssucceffily delete",
+    status: "succés",
+    message: "L'emploi supprimé avec succés .",
   });
 });
 /* ====================================================================VERIFICATION EMPLOI BEFORE ADDET OR EDIT=====================*/

@@ -3,27 +3,23 @@ const Matiere = require("../models/matiere");
 const User = require("../auth/models/user");
 const professeurSchema = mongoose.Schema(
   {
-    nom: {
+    nomComplet: {
       type: String,
-      required: [true, "nom of professeur is required"],
+      required: [true, "Le nom complet est requis !"],
       select: true,
-    },
-    prenom: {
-      type: String,
-      select: true,
-      required: [true, "prenom of professeur is required"],
     },
 
     mobile: {
       type: Number,
-      required: [true, "mobile number is required"],
+      required: [true, "Numero telephonne est requis !"],
       unique: true,
     },
     email: {
       type: String,
-      required: [true, "email is required"],
+      required: [true, "email est requis !"],
       unique: true,
       trim: true,
+      lowercase: true,
     },
     matieres: [
       {
@@ -31,6 +27,16 @@ const professeurSchema = mongoose.Schema(
         ref: "Matiere",
       },
     ],
+    banque: {
+      type: String,
+      default: "BMCI",
+    },
+
+    accountNumero: {
+      type: Number,
+      unique: true,
+    },
+
     user: {
       type: mongoose.Schema.ObjectId,
       ref: "User",
@@ -52,7 +58,9 @@ professeurSchema.pre("save", async function (next) {
       this.matieres.map(async (el) => {
         const refDoc = await Matiere.findById(el);
         if (!refDoc) {
-          throw new Error(`Referenced document not found for objectId: ${el}`);
+          throw new Error(
+            `Aucun document reference trouvé pour cet identifiant: ${el}`
+          );
         }
         return refDoc;
       })
@@ -66,16 +74,28 @@ professeurSchema.post("findOneAndDelete", async function (professeur) {
   console.log(" professeur remove midleweere work ....................");
   const Cours = require("./cours");
   const Emploi = require("./emploi");
-  let message = `Successfully deleted professeur : ${professeur.nom}  ${professeur.prenom}  with all his [ cours, emploi] ...`;
+  let message = `L'eneignant : ${professeur.nomComplet} est suupprimé  et ces [ cours, emploi] avec succés .`;
   await Cours.deleteMany({ professeur: professeur._id });
   await Emploi.deleteMany({ professeur: professeur._id });
-  professeur.nom = message;
+  professeur.nomComplet = message;
 });
-professeurSchema.methods.getInformation = async function () {
+professeurSchema.methods.getInformation = function () {
+  return [
+    this._id,
+    this.nomComplet,
+    this.email,
+    this.mobile,
+    this.banque,
+    this.accountNumero,
+  ];
+};
+professeurSchema.methods.getPaiementInfo = async function () {
   const Cours = require("./cours");
+  const professeur = await this.constructor.findById(this._id);
+  const prof_info = await professeur.getInformation();
   const prof_cours = await Cours.find({
     professeur: this._id,
-    isSigned: "YES",
+    isSigned: "oui",
   });
   let nbh = 0;
   let th = 0;
@@ -89,19 +109,17 @@ professeurSchema.methods.getInformation = async function () {
     somme = cours_info[7] + somme;
   }
   return [
-    this._id,
-    this.nom,
-    this.prenom,
-    this.email,
-    this.mobile,
+    prof_info[0],
+    prof_info[1],
+    prof_info[2],
+    prof_info[3],
+    prof_info[4],
+    prof_info[5],
     nbh,
     th,
     nbc,
-    somme.toFixed(2),
+    somme,
   ];
-};
-professeurSchema.methods.getNomComplet = async function () {
-  return this.nom + " " + this.prenom;
 };
 professeurSchema.methods.getMatieres = async function () {
   const Matiere = require("./matiere");
@@ -113,7 +131,7 @@ professeurSchema.methods.getMatieres = async function () {
     let data = {
       _id: matiere._id,
       name: matiere.name,
-      description: matiere.description,
+      categorie: matiere_info[1],
       numero: matiere.numero,
       prix: matiere_info[3],
       code: matiere_info[2],

@@ -1,27 +1,10 @@
 const mongoose = require("mongoose");
-
 const groupSchema = mongoose.Schema({
-  groupName: {
+  name: {
     type: String,
     select: true,
-    required: true,
-    validate: {
-      validator: function (val) {
-        if (this.isOne === "YES") {
-          return ["ALL"].includes(val);
-        } else if (this.isOne === "NO") {
-          return ["A", "B", "C", "D", "E"].includes(val);
-        }
-        return false;
-      },
-      message: "Invalid groupName for division as many groups ",
-    },
-  },
-  isOne: {
-    type: String,
-    required: true,
-    default: "YES",
-    enum: ["YES", "NO"],
+    required: [true, "Le nom du groupe est requis !"],
+    enum: ["", "A", "B", "C", "D", "E"],
   },
   startEmploi: {
     type: Date,
@@ -41,16 +24,16 @@ const groupSchema = mongoose.Schema({
   semestre: {
     type: mongoose.Schema.ObjectId,
     ref: "Semestre",
-    required: [true, "semestre is required"],
+    required: [true, "semestre est requis !"],
   },
 });
+groupSchema.methods.getInformation = function () {};
 groupSchema.post("findOneAndDelete", async function (group) {
   console.log(" group remove midleweere work ....................");
   const Emploi = require("./emploi");
   await Emploi.deleteMany({ group: group._id });
-  group.groupName = `Successfully deleted group : ${group.groupName}   with his all emplois ...`;
-  console.log(
-    `Successfully deleted group : ${group.groupName}   with his emplois ...`
-  );
+  group.name = `le supprimé avec succés avec liste d'emploi .`;
+  console.log(`${group.name}`);
 });
+
 module.exports = mongoose.model("Group", groupSchema);

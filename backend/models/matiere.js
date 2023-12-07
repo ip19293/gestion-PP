@@ -52,7 +52,7 @@ matiereSchema.post("findOneAndDelete", async function (matiere) {
   const Professeur = require("./professeur");
   const Semestre = require("./semestre");
   const Emploi = require("./emploi");
-  let message = `Successfully deleted matiere : ${matiere.name} from all [professeurs liste, semestres element,cours,emploi] ...`;
+  let message = `La matière supprimée avec succès de tous les semestres elements,cours,emplois et enseignants liste des matières .`;
 
   const professeur = await Professeur.updateMany(
     {
@@ -87,7 +87,10 @@ matiereSchema.pre("validate", async function (next) {
     });
     if (existingDoc && !existingDoc._id.equals(this._id)) {
       return next(
-        new AppError("matiere numero mast be unique by categorie ....", 404)
+        new AppError(
+          "Le numéro de matière doit etre unique par catégorie ! ",
+          404
+        )
       );
     }
   } catch (error) {

@@ -20,10 +20,10 @@ const types_TO_th_nbh_nbm_thsm = (types) => {
 };
 function createFinishTimeFromStartTimeAndVerifiedIsBetweenT1AndT2(
   add_emploi,
-  emplois_list_day
+  emplois_list_day,
+  type
 ) {
   let result = ["success", "this action successfully ....", add_emploi];
-
   const input = add_emploi.startTime.split(":");
   let hour = parseInt(input[0]);
   let minute = parseInt(input[1]);
@@ -91,8 +91,9 @@ function createFinishTimeFromStartTimeAndVerifiedIsBetweenT1AndT2(
     } else {
       result[2] = {};
       result[0] = "failed";
-      result[1] = `This plan time is not valide because the professeur busy between ${elem.startTime} AND ${finishTime}`;
+      result[1] = `Le temps de ce cour n'est pas valable parce que ce ${type} est occupé le méme date entre  ${elem.startTime} et ${finishTime}`;
     }
+    // ${strtDate.getDate()}-${strtDate.getMonth()}-${strtDate.getFullYear()}
   }
   return result;
 }

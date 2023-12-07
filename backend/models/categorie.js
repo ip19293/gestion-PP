@@ -5,7 +5,8 @@ const categorieSchema = mongoose.Schema(
   {
     name: {
       type: String,
-      required: [true, "categorie is required"],
+      required: [true, "la catégorie est requis !"],
+      lowercase: true,
       unique: true,
       trim: true,
     },
@@ -17,7 +18,7 @@ const categorieSchema = mongoose.Schema(
     },
     prix: {
       type: Number,
-      required: [true, "prix is required"],
+      required: [true, "le prix est requis !"],
       default: 100,
       min: 100,
       max: 900,
@@ -62,7 +63,14 @@ categorieSchema.methods.getInformation = async function () {
     });
     console.log(categorie_code);
   }
-  return [categorie_code, nb_matieres];
+  return [
+    categorie_code,
+    nb_matieres,
+    this._id,
+    this.name,
+    this.description,
+    this.prix,
+  ];
 };
 categorieSchema.post("findOneAndDelete", async function (categorie, message) {
   console.log(" categorie remove midleweere work ....................");
@@ -79,7 +87,7 @@ categorieSchema.post("findOneAndDelete", async function (categorie, message) {
 
   let mm = [];
 
-  message = `Successfully deleted categorie : ${categorie.name} `;
+  message = `Catégorie : ${categorie.name} supprimée avec succès `;
   for (m of matieres) {
     mm.push(m.name);
     const professeur = await Professeur.updateMany(
@@ -108,7 +116,7 @@ categorieSchema.post("findOneAndDelete", async function (categorie, message) {
   if (mm.length != 0) {
     message =
       message +
-      ` with his elements ${mm.length}  matieres [${mm}] from all professeurs liste , semestres element ,cours ,emploi ...`;
+      ` avec ses éléments ${mm.length} qui sont supprimée de ${professeurs.length} enseignants liste et semestres,cours ,emploi .`;
   }
 
   await Matiere.deleteMany({ categorie: categorie._id });

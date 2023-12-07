@@ -1,22 +1,21 @@
 const mongoose = require("mongoose");
 const Professeur = require("./professeur");
 const Matiere = require("./matiere");
-
+const AppError = require("../utils/appError");
 const emploiSchema = mongoose.Schema({
   types: [
     {
       name: {
         type: String,
-        required: [true, "type is required"],
-        enum: {
-          values: ["CM", "TD", "TP"],
-          message: " values suported is : CM TD TP ...",
-        },
+        required: [true, "Le type est requis !"],
+        enum: ["CM", "TD", "TP"],
       },
       nbh: {
         type: Number,
-        required: true,
+        required: [true, "Nombre d'heures est requis !"],
         default: 1.5,
+        min: 0,
+        max: 3,
       },
     },
   ],
@@ -31,27 +30,50 @@ const emploiSchema = mongoose.Schema({
   },
   dayNumero: {
     type: Number,
-    required: [true, "dayNumero is required"],
+    required: [true, "Le jour est requis !"],
     select: true,
     enum: [0, 1, 2, 3, 4, 5, 6],
   },
   group: {
     type: mongoose.Schema.ObjectId,
     ref: "Group",
-    required: [true, "group is required"],
+    required: [true, "le group est requis !"],
   },
   professeur: {
     type: mongoose.Schema.ObjectId,
     ref: "Professeur",
-    required: [true, "professeur is required"],
+    required: [true, "enseignant est requis !"],
   },
   matiere: {
     type: mongoose.Schema.ObjectId,
     ref: "Matiere",
-    required: [true, "matiere is required"],
+    required: [true, "matiére est requis !"],
   },
 });
-/* =====================================================================MIDLWERE */
+/* ===================================================================== validate midelwere ======================== */
+emploiSchema.pre("validate", async function (next) {
+  try {
+    let dt = types_TO_th_nbh_nbm_thsm(this.types);
+    let nbh = dt[1];
+    if (
+      this.types[0].nbh != 0 &&
+      this.types[1].nbh != 0 &&
+      this.types[2].nbh != 0
+    ) {
+      return next(
+        new AppError("Un cours ne peut pas contient plus de deux type !", 404)
+      );
+    }
+    if (nbh > 3) {
+      return next(
+        new AppError("Un cours ne peut pas durer plus de trois heures !", 404)
+      );
+    }
+  } catch (error) {
+    next(error);
+  }
+});
+/* ===================================================================== save  midelwere ======================== */
 emploiSchema.pre("save", async function (next) {
   const input = this.startTime.split(":");
   let hour = parseInt(input[0]);
@@ -94,7 +116,7 @@ const types_TO_th_nbh_nbm_thsm = (types) => {
   return [th, nbh, nbm, thsm];
 };
 
-/* ---------------------------------------------------------------------get day name---------------------- */
+/* ---------------------------------------------------------------------get day name methods---------------------- */
 emploiSchema.methods.getDayName = async function (index) {
   let daysOfWeek = [
     "Sunday",
@@ -111,7 +133,8 @@ emploiSchema.methods.getDayName = async function (index) {
 emploiSchema.methods.getProfesseurMatiere = async function () {
   const prof = await Professeur.findById(this.professeur);
   const matiere = await Matiere.findById(this.matiere);
-  let res = [prof._id, prof.nom + " " + prof.prenom, matiere._id, matiere.name];
+
+  let res = [prof._id, prof.nomComplet, matiere._id, matiere.name];
 
   return res;
 };

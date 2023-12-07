@@ -19,17 +19,17 @@ exports.getCategories = catchAsync(async (req, res, next) => {
   for (elem of categories_list) {
     let categorie_info = await elem.getInformation();
     let data = {
-      _id: elem._id,
-      name: elem.name,
-      description: elem.description,
-      prix: elem.prix,
+      _id: categorie_info[2],
+      name: categorie_info[3],
+      description: categorie_info[4],
+      prix: categorie_info[5],
       nb_matieres: categorie_info[1],
       code: categorie_info[0],
     };
     categories.push(data);
   }
   res.status(200).json({
-    status: "success",
+    status: "succès",
     categories,
   });
 });
@@ -37,7 +37,7 @@ exports.getCategories = catchAsync(async (req, res, next) => {
 exports.deleteAllCategories = catchAsync(async (req, res, next) => {
   await Categorie.deleteMany();
   res.status(200).json({
-    status: "success",
+    status: "succès",
     message: "all Categories is deleted",
   });
 });
@@ -47,14 +47,15 @@ exports.addCategorie = catchAsync(async (req, res, next) => {
   const Oldcategorie = await Categorie.findOne({ name: req.body.name });
   if (Oldcategorie) {
     return res.status(400).json({
-      status: "fail",
-      message: "the categorie name existe before",
+      status: "échec",
+      message: "La catégorie existe déjà !",
     });
   }
   const categorie = await Categorie.create(data);
 
   res.status(200).json({
-    status: "success",
+    status: "succès",
+    message: "La catégorie est ajouté avec succés .",
     categorie,
   });
 });
@@ -62,16 +63,23 @@ exports.addCategorie = catchAsync(async (req, res, next) => {
 exports.updateCategorie = catchAsync(async (req, res, next) => {
   const id = req.params.id;
   const data = req.body;
-
-  const categorie = await Categorie.findByIdAndUpdate(id, data, {
-    new: true,
-    runValidators: true,
-  });
+  const categorie = await Categorie.findById(id);
   if (!categorie) {
-    return next(new AppError("No Categorie found with that ID", 404));
+    return next(
+      new AppError("Aucune catégorie trouvée avec cet identifiant !", 404)
+    );
   }
+  const Oldcategorie = await Categorie.findOne({ name: req.body.name });
+  if (Oldcategorie && !Oldcategorie._id.equals(id)) {
+    return next(new AppError("La catégorie existe déjà !", 404));
+  }
+  categorie.name = req.body.name;
+  categorie.description = req.body.description;
+  categorie.prix = req.body.prix;
+  await categorie.save();
   res.status(201).json({
-    status: "success",
+    status: "succès",
+    message: "La catégorie est modifié avec succés .",
     categorie,
   });
 });
@@ -82,11 +90,13 @@ exports.deleteCategorie = catchAsync(async (req, res, next) => {
   const categorie = await Categorie.findById(id);
 
   if (!categorie) {
-    return next(new AppError("No Categorie found with that ID", 404));
+    return next(
+      new AppError("Aucune catégorie trouvée avec cet identifiant !", 404)
+    );
   }
   const deleted_categorie = await Categorie.findOneAndDelete(id);
   res.status(200).json({
-    status: "success",
+    status: "succès",
     message: deleted_categorie.name,
     categorie,
   });
@@ -96,10 +106,12 @@ exports.getCategorieById = catchAsync(async (req, res, next) => {
   const id = req.params.id;
   const categorie = await Categorie.findById(id);
   if (!categorie) {
-    return next(new AppError("No Categorie found with that ID", 404));
+    return next(
+      new AppError("Aucune catégorie trouvée avec cet identifiant !", 404)
+    );
   }
   res.status(200).json({
-    status: "success",
+    status: "succès",
     categorie,
   });
 });
@@ -111,7 +123,7 @@ exports.getCategorieMatieres = catchAsync(async (req, res, next) => {
   });
 
   res.status(200).json({
-    status: "success",
+    status: "succès",
     matieres,
   });
 });

@@ -25,14 +25,14 @@ exports.getFillieres = catchAsync(async (req, res, next) => {
   const fillieres = await features.query;
 
   res.status(200).json({
-    status: "success",
+    status: "succès",
     fillieres,
   });
 });
 exports.deleteAllFillieres = catchAsync(async (req, res, next) => {
   await Filliere.deleteMany();
   res.status(200).json({
-    status: "success",
+    status: "succès",
     message: "all fillieres is deleted",
   });
 });
@@ -44,8 +44,8 @@ exports.addFilliere = catchAsync(async (req, res, next) => {
   });
   if (Oldfilliere) {
     return res.status(400).json({
-      status: "fail",
-      message: " existe before",
+      status: "échec",
+      message: `La filière ${Oldfilliere.niveau} ${Oldfilliere.name} existe déjà !`,
     });
   }
   const filliere = await Filliere.create({
@@ -55,8 +55,7 @@ exports.addFilliere = catchAsync(async (req, res, next) => {
   });
 
   res.status(200).json({
-    status: "success",
-
+    status: "succès",
     filliere,
   });
 });
@@ -65,11 +64,12 @@ exports.updateFilliere = catchAsync(async (req, res, next) => {
   const id = req.params.id;
   const Oldfilliere = await Filliere.findOne({
     name: req.body.name,
+    niveau: req.body.niveau,
   });
-  if (!Oldfilliere._id.equals(id)) {
+  if (Oldfilliere && !Oldfilliere._id.equals(id)) {
     return res.status(400).json({
-      status: "fail",
-      message: "the filliere name existe before",
+      status: "échec",
+      message: `La filière ${Oldfilliere.niveau} ${Oldfilliere.name} existe déjà ...`,
     });
   }
   const filliere = await Filliere.findById(id);
@@ -78,10 +78,12 @@ exports.updateFilliere = catchAsync(async (req, res, next) => {
   filliere.description = req.body.description;
   await filliere.save();
   if (!filliere) {
-    return next(new AppError("No filliere found with that ID", 404));
+    return next(
+      new AppError("La filière avec cet identifiant introuvable !", 404)
+    );
   }
   res.status(201).json({
-    status: "success",
+    status: "succès",
     filliere: filliere,
   });
 });
@@ -90,22 +92,28 @@ exports.deleteFilliere = catchAsync(async (req, res, next) => {
   const id = req.params.id;
   const filliere = await Filliere.findOneAndDelete(id);
   if (!filliere) {
-    return next(new AppError("No filliere found with that ID", 404));
+    return next(
+      new AppError("La filière avec cet identifiant introuvable !", 404)
+    );
   }
   res.status(200).json({
-    status: "success",
-    message: "filliere ssucceffily delete",
+    status: "succès",
+    message: filliere.name,
   });
 });
 /* ======================================================GET BY ID=========================================== */
 exports.getFilliere = catchAsync(async (req, res, next) => {
   const id = req.params.id;
   const filliere = await Filliere.findById(id);
+  let filliere_info = await filliere.getInformation();
   if (!filliere) {
-    return next(new AppError("No filliere found with that ID", 404));
+    return next(
+      new AppError("La filière avec cet identifiant introuvable !", 404)
+    );
   }
   res.status(200).json({
-    status: "success",
+    status: "succès",
+    filliere_info,
     filliere,
   });
 });
@@ -113,9 +121,12 @@ exports.getFilliere = catchAsync(async (req, res, next) => {
 exports.getFilliereDetail = catchAsync(async (req, res, next) => {
   const id = req.params.id;
   const filliere = await Filliere.findById(id);
+  let filliere_info = await filliere.getInformation();
   let list_semestres = [];
   if (!filliere) {
-    return next(new AppError("No filliere found with that ID", 404));
+    return next(
+      new AppError("La filière avec cet identifiant introuvable !", 404)
+    );
   }
 
   const semestres = await Semestre.find({ filliere: id });
@@ -124,9 +135,10 @@ exports.getFilliereDetail = catchAsync(async (req, res, next) => {
       list_semestres.push(s.numero);
     }
   }
-  const data = await getFilliereSemestresElements(semestres, filliere.niveau);
+  const data = await getFilliereSemestresElements(semestres, filliere);
   res.status(200).json({
-    status: "success",
+    status: "succès",
+
     _id: filliere._id,
     filliere: filliere.name,
     description: filliere.description,
@@ -141,22 +153,16 @@ exports.getFilliereDetail = catchAsync(async (req, res, next) => {
     .sort({ semestre: 1, code_EM: 1 })
     .populate([{ path: "matiere" }]);
   res.status(200).json({
-    status: "success",
+    status: "succès",
     elements,
   });
 }); */
 
 /* -----------------------------------------------------------FUNCTIONS----------------------- */
 /* 1) GET SEMESTRE WITH ELEMENTS  ----------------------------*/
-async function getFilliereSemestresElements(semestres, niveau) {
+async function getFilliereSemestresElements(semestres, filliere) {
   let data = [];
-  let LMD_niveau = ["Licence", "Master", "Doctorat"];
-  let LMD_numero = 1;
-  for (x of LMD_niveau) {
-    if (x == niveau) {
-      LMD_numero = LMD_niveau.indexOf(x) + LMD_numero;
-    }
-  }
+  let filliere_info = await filliere.getInformation();
   if (Array.isArray(semestres)) {
     for (const s of semestres) {
       if (Array.isArray(s.elements)) {
@@ -165,7 +171,10 @@ async function getFilliereSemestresElements(semestres, niveau) {
             const matiere = await Matiere.findById(el);
             let matiere_info = await matiere.getInformation();
             let code =
-              matiere_info[4] + (await s.numero) + LMD_numero + matiere.numero;
+              matiere_info[4] +
+              (await s.numero) +
+              filliere_info[5] +
+              matiere.numero;
             let element = new FilliereDetail(
               s._id,
               s.numero,

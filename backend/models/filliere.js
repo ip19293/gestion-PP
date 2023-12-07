@@ -1,62 +1,58 @@
 const mongoose = require("mongoose");
 const Categorie = require("../models/categorie");
 const Matiere = require("../models/matiere");
+const group = require("./group");
 const filiereSchema = mongoose.Schema({
-  name: { type: String, required: true },
+  name: { type: String, required: true, lowercase: true },
   niveau: {
     type: String,
-    default: "Licence",
-    enum: ["Licence", "Master", "Doctorat"],
+    default: "licence",
+    enum: ["licence", "master", "doctorat"],
   },
   description: {
     type: String,
     default: "",
   },
-  periode: {
-    type: Number,
-    default: 3,
-    enum: [2, 3],
-  },
 });
 
-filiereSchema.pre("save", async function (next) {
-  if (this.niveau != undefined) {
-    if (this.niveau == "Master") {
-      this.periode = 2;
-    } else {
-      this.periode = 3;
-    }
-  }
-  next();
-});
-filiereSchema.methods.nombresOfAnnes = function () {
+filiereSchema.methods.getInformation = function () {
   let periode = 0;
+  let niveaus = ["licence", "master", "doctorat"];
+  let place = niveaus.findIndex((niveau) => niveau == this.niveau) + 1;
   if (this.niveau != undefined) {
-    if (this.niveau == "Master") {
+    if (this.niveau == "master") {
       periode = 2;
     } else {
       periode = 3;
     }
   }
-  return periode;
+  return [this._id, this.name, this.description, this.niveau, periode, place];
 };
 
-filiereSchema.post("findOneAndDelete", async function (filliere) {
+filiereSchema.post("findOneAndDelete", async function (filliere, message) {
   console.log(" filliere remove midleweere work ....................");
   const Semestre = require("./semestre");
+  const Emploi = require("./emploi");
   const Group = require("./group");
   const semestres = await Semestre.find({ filliere: filliere._id });
-  let nb = 0;
-  let mm = " , ";
-  for (m of semestres) {
-    nb = nb + 1;
-    mm = m.numero + mm;
-    await Group.deleteMany({ semestre: m._id });
+  let groups = [];
+  let emplois = [];
+  for (x of semestres) {
+    let group = await Group.deleteMany({ semestre: x._id });
+    if (group) {
+      groups.push(group);
+    }
+  }
+  for (x of groups) {
+    let emploi = await Emploi.deleteMany({ semestre: x._id });
+    if (emploi) {
+      emplois.push(emploi);
+    }
   }
   await Semestre.deleteMany({ filliere: filliere._id });
-  console.log(
-    `Successfully deleted filliere : ${filliere.name}   with his elements ${nb} semestres [${mm}] ...`
-  );
+  message = `La filière ${filliere.niveau} ${filliere.name} avec  ${semestres.length} semestres, ${groups.length} groups et ${emplois.length} cours d'emploi du temps est supprimé !`;
+  filliere.name = message;
+  console.log(message);
 });
 
 module.exports = mongoose.model("Filliere", filiereSchema);

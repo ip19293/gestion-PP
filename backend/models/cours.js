@@ -1,34 +1,34 @@
 const mongoose = require("mongoose");
 const Matiere = require("./matiere");
 const Professeur = require("./professeur");
+const AppError = require("../utils/appError");
 const coursSchema = mongoose.Schema(
   {
     types: [
       {
         name: {
           type: String,
-          required: [true, "type is required"],
-          enum: {
-            values: ["CM", "TD", "TP"],
-            message: "{VALUE} is not supported",
-          },
+          required: [true, "Le type est requis !"],
+          enum: ["CM", "TD", "TP"],
         },
         nbh: {
           type: Number,
-          required: true,
+          required: [true, "Nombre d'heures est requis !"],
           default: 1.5,
+          min: 0,
+          max: 3,
         },
       },
     ],
     date: {
       type: Date,
-      required: [true, "date is required"],
+      required: [true, "Date est requis !"],
     },
 
     startTime: {
       type: String,
       select: true,
-      required: true,
+      required: [true, "Heure de début est requis !"],
     },
     finishTime: {
       type: String,
@@ -37,33 +37,23 @@ const coursSchema = mongoose.Schema(
     professeur: {
       type: mongoose.Schema.ObjectId,
       ref: "Professeur",
-      required: [true, "professeur is required"],
+      required: [true, "Enseigant est requis !"],
     },
     matiere: {
       type: mongoose.Schema.ObjectId,
       ref: "Matiere",
-      required: [true, "matiere is required"],
+      required: [true, "matiére est requis"],
     },
 
     isSigned: {
       type: String,
-      default: "NO",
-      enum: ["YES", "NO"],
+      default: "pas encore",
+      enum: ["oui", "pas encore"],
     },
     isPaid: {
       type: String,
-      default: "NO",
-      enum: ["YES", "NO"],
-      validate: {
-        validator: function (val) {
-          if (this.isSigned === "YES") {
-            return ["YES", "NO"].includes(val);
-          } else {
-            return ["NO"].includes(val);
-          }
-        },
-        message: "Invalid groupName for division as many groups ",
-      },
+      default: "pas encore",
+      enum: ["oui", "pas encore"],
     },
   },
   { timestamps: true },
@@ -73,6 +63,33 @@ const coursSchema = mongoose.Schema(
   }
 );
 /* =====================================================================MIDLWERE */
+coursSchema.pre("validate", async function (next) {
+  try {
+    let dt = types_TO_th_nbh_nbm_thsm(this.types);
+    let nbh = dt[1];
+    if (
+      this.types[0].nbh != 0 &&
+      this.types[1].nbh != 0 &&
+      this.types[2].nbh != 0
+    ) {
+      return next(
+        new AppError("Un cours ne peut pas contient plus de deux type !", 404)
+      );
+    }
+    if (nbh > 3) {
+      return next(
+        new AppError("Un cours ne peut pas durer plus de trois heures !", 404)
+      );
+    }
+    if (this.isSigned == "pas encore" && this.isPaid == "oui") {
+      return next(
+        new AppError("Un cours non signé ne peut pas étre paiée !", 404)
+      );
+    }
+  } catch (error) {
+    next(error);
+  }
+});
 coursSchema.pre("save", async function (next) {
   const input = this.startTime.split(":");
   let hour = parseInt(input[0]);
@@ -107,10 +124,15 @@ coursSchema.methods.getInformation = async function () {
   const matiere = await Matiere.findById(this.matiere);
   let matiere_info = await matiere.getInformation();
   let sommeUM = tauxHoreure * matiere_info[3];
+  let types = [];
+  for (let x of this.types) {
+    if (x.nbh != 0) {
+      types.push(x);
+    }
+  }
   return [
     professeur._id,
-    professeur.nom,
-    professeur.prenom,
+    professeur.nomComplet,
     professeur.email,
     professeur.mobile,
     nbh,
@@ -118,6 +140,7 @@ coursSchema.methods.getInformation = async function () {
     sommeUM,
     matiere.name,
     matiere_info[3],
+    types,
   ];
 };
 /* =====================================================================FONCTION============================== */
