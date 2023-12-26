@@ -23,7 +23,7 @@ CoursRouter.route("/auto-create").get(
   authController.restricTo("admin"),
   autoCreateCoursController.auto
 );
-CoursRouter.route("/:id/cours").post(courController.getAllCoursProf);
+CoursRouter.route("/:id/cours").post(courController.getCoursByProfesseursId);
 CoursRouter.route("/:id/signe").patch(courController.signeCours);
 
 CoursRouter.route("/:id")

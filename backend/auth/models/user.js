@@ -2,34 +2,35 @@ const crypto = require("crypto");
 const { default: mongoose } = require("mongoose");
 const validator = require("validator");
 const bcrypt = require("bcryptjs");
+const AppError = require("../../utils/appError");
 const userSchema = mongoose.Schema({
   nom: {
     type: String,
-    required: [true, "Please tell us your name!"],
+    required: [true, "Le nom est requis !"],
   },
   prenom: {
     type: String,
-    required: [true, "prenom of professeur is required"],
+    required: [true, "Le prenom est requis !"],
   },
 
   mobile: {
     type: Number,
-    required: [true, "mobile number is required"],
+    required: [true, "Le numéro de téléphone est reauis !"],
     unique: true,
   },
   email: {
     type: String,
-    required: [true, "email is required"],
+    required: [true, "E-mail est requis !"],
     unique: true,
     lowercase: true,
-    validate: [validator.isEmail, "Please provide a valid Email"],
+    validate: [validator.isEmail, "Veuillez fournir un e-mail valide"],
   },
   photo: {
     type: String,
   },
   password: {
     type: String,
-    required: [true, "Please provide a password"],
+    required: [true, "Veuillez fournir un mot de passe !"],
     nimlength: 8,
     select: false,
   },
@@ -40,13 +41,13 @@ const userSchema = mongoose.Schema({
   },
   passwordConfirm: {
     type: String,
-    required: [true, "please confirm your password"],
+    required: [true, "Veuillez vous confirmé votre mot de passe "],
     validate: {
       // this only works on CREATE and SAVE!!!
       validator: function (el) {
         return el === this.password;
       },
-      message: " password are not samme!!!",
+      message: "Les mots de passe ne sont pas les mèmes !!!",
     },
   },
 

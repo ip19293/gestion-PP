@@ -3,22 +3,18 @@ const Professeur = require("./professeur");
 const Matiere = require("./matiere");
 const AppError = require("../utils/appError");
 const emploiSchema = mongoose.Schema({
-  types: [
-    {
-      name: {
-        type: String,
-        required: [true, "Le type est requis !"],
-        enum: ["CM", "TD", "TP"],
-      },
-      nbh: {
-        type: Number,
-        required: [true, "Nombre d'heures est requis !"],
-        default: 1.5,
-        min: 0,
-        max: 3,
-      },
-    },
-  ],
+  type: {
+    type: String,
+    required: [true, "Le type est requis !"],
+    enum: ["CM", "TD", "TP"],
+  },
+  nbh: {
+    type: Number,
+    required: [true, "Nombre d'heures est requis !"],
+    default: 1.5,
+    min: 0,
+    max: 3,
+  },
   startTime: {
     type: String,
     select: true,
@@ -53,18 +49,7 @@ const emploiSchema = mongoose.Schema({
 /* ===================================================================== validate midelwere ======================== */
 emploiSchema.pre("validate", async function (next) {
   try {
-    let dt = types_TO_th_nbh_nbm_thsm(this.types);
-    let nbh = dt[1];
-    if (
-      this.types[0].nbh != 0 &&
-      this.types[1].nbh != 0 &&
-      this.types[2].nbh != 0
-    ) {
-      return next(
-        new AppError("Un cours ne peut pas contient plus de deux type !", 404)
-      );
-    }
-    if (nbh > 3) {
+    if (this.nbh > 3) {
       return next(
         new AppError("Un cours ne peut pas durer plus de trois heures !", 404)
       );
@@ -80,11 +65,9 @@ emploiSchema.pre("save", async function (next) {
   let minute = parseInt(input[1]);
   const strtDate = new Date();
   strtDate.setHours(hour, minute, 0);
-  let dt = types_TO_th_nbh_nbm_thsm(this.types);
-  let nbh = dt[1];
-  let nbm = dt[2];
+  let nbm = (this.nbh % 1) * 60;
   const fnshDate = new Date();
-  fnshDate.setHours(hour + nbh, minute + nbm, 0);
+  fnshDate.setHours(hour + this.nbh, minute + nbm, 0);
   let finishtime = "";
   if (fnshDate.getMinutes() < 10) {
     finishtime = fnshDate.getHours() + ":0" + fnshDate.getMinutes();
@@ -95,37 +78,17 @@ emploiSchema.pre("save", async function (next) {
 
   next();
 });
-/* ----------------------------------------------------------FONCTIONS----------------------- */
-const types_TO_th_nbh_nbm_thsm = (types) => {
-  let th = 0;
-  let nbh = 0;
-  let nbm = 0;
-  let thsm = 0;
-  types.forEach((e) => {
-    if (e.name == "CM") {
-      th = th + e.nbh;
-    }
-    if (e.name == "TD" || e.name == "TP") {
-      th = th + (e.nbh * 2) / 3;
-    }
-    thsm = th + thsm;
-    nbh = nbh + e.nbh;
-  });
-  nbm = (nbh % 1) * 60;
-
-  return [th, nbh, nbm, thsm];
-};
 
 /* ---------------------------------------------------------------------get day name methods---------------------- */
 emploiSchema.methods.getDayName = async function (index) {
   let daysOfWeek = [
-    "Sunday",
-    "Monday",
-    "Tuesday",
-    "Wednesday",
-    "Thursday",
-    "Friday",
-    "Saturday",
+    "Dimanche",
+    "Lundi",
+    "Mardi",
+    "Mercredi",
+    "Jeudi",
+    "Vendredi",
+    "Samedi",
   ];
 
   return daysOfWeek[index];
@@ -134,8 +97,30 @@ emploiSchema.methods.getProfesseurMatiere = async function () {
   const prof = await Professeur.findById(this.professeur);
   const matiere = await Matiere.findById(this.matiere);
 
-  let res = [prof._id, prof.nomComplet, matiere._id, matiere.name];
+  let res = [prof.nomComplet, matiere.name];
 
   return res;
 };
+
+emploiSchema.methods.getGName_SNum_SId_FId_FName_FNiveau_NiveauAnnee =
+  async function () {
+    const Group = require("./group");
+    const Semestre = require("./semestre");
+    const Filliere = require("./filliere");
+    const group = await Group.findById(this.group);
+    let group_info = await group.getSNumero_FId_FName_FNiveau_NiveauAnnee();
+    let info = [];
+    if (group) {
+      info = [
+        group.name,
+        group_info[0],
+        group.semestre,
+        group_info[1],
+        group_info[2],
+        group_info[3],
+        group_info[4],
+      ];
+    }
+    return info;
+  };
 module.exports = mongoose.model("Emploi", emploiSchema);

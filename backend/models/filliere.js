@@ -15,7 +15,7 @@ const filiereSchema = mongoose.Schema({
   },
 });
 
-filiereSchema.methods.getInformation = function () {
+filiereSchema.methods.getPeriodePlace = function () {
   let periode = 0;
   let niveaus = ["licence", "master", "doctorat"];
   let place = niveaus.findIndex((niveau) => niveau == this.niveau) + 1;
@@ -26,9 +26,20 @@ filiereSchema.methods.getInformation = function () {
       periode = 3;
     }
   }
-  return [this._id, this.name, this.description, this.niveau, periode, place];
+  return [periode, place];
 };
-
+filiereSchema.methods.getEmplois = async function () {
+  const Group = require("./group");
+  const Semestre = require("./semestre");
+  const Emploi = require("./emploi");
+  const semestres = await Semestre.find({ filliere: this._id });
+  for (let semestre of semestres) {
+    let groups = await Group.find({ semestre: semestre._id });
+    for (let group of groups) {
+      let emplois = await Emploi.find({ group: group._id });
+    }
+  }
+};
 filiereSchema.post("findOneAndDelete", async function (filliere, message) {
   console.log(" filliere remove midleweere work ....................");
   const Semestre = require("./semestre");

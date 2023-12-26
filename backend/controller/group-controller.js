@@ -9,6 +9,7 @@ const AppError = require("../utils/appError");
 const Emploi = require("../models/emploi");
 const { default: mongoose } = require("mongoose");
 const matiere = require("../models/matiere");
+const professeur = require("../models/professeur");
 
 exports.getGroups = catchAsync(async (req, res, next) => {
   let filter = {};
@@ -42,18 +43,22 @@ exports.addGroup = catchAsync(async (req, res, next) => {
       )
     );
   }
-  let group = await Group.findOne({
-    semestre: req.body.semestre,
-    name: { $in: [req.body.name, ""] },
-  });
-  if (group) {
+  const filliere = await Filliere.findById(semestre.filliere);
+  if (!filliere) {
     return next(
-      new AppError(
-        `Cette group (${group.name}) existe déja ${semestre.filliere.niveau} ${semestre.filliere.name} S${semestre.numero}  .`,
-        404
-      )
+      new AppError(`Aucun filiere trouvé avec cet identifiant !`, 404)
     );
   }
+  let group = await Group.findOne({
+    semestre: req.body.semestre,
+    name: req.body.name,
+  });
+  let ms = `Le groupe ${req.body.name} existe déja dans S${semestre.numero} ${filliere.niveau} ${filliere.name} !`;
+
+  if (group) {
+    return next(new AppError(ms, 404));
+  }
+
   group = new Group({
     name: req.body.name,
     semestre: req.body.semestre,
@@ -78,7 +83,7 @@ exports.updateGroup = catchAsync(async (req, res, next) => {
       )
     );
   }
-  const semestre = await Semestre.findById(req.body.semestre);
+  const semestre = await Semestre.findOne({ _id: req.body.semestre });
   if (!semestre) {
     return next(
       new AppError(
@@ -87,19 +92,22 @@ exports.updateGroup = catchAsync(async (req, res, next) => {
       )
     );
   }
+  const filliere = await Filliere.findById(semestre.filliere);
+  if (!filliere) {
+    return next(
+      new AppError(`Aucun filiere trouvé avec cet identifiant !`, 404)
+    );
+  }
   const gp = await Group.findOne({
     _id: { $ne: id },
     semestre: req.body.semestre,
-    name: { $in: [req.body.name, ""] },
+    name: req.body.name,
   });
 
+  let ms = `Le groupe ${req.body.name} existe déja dans S${semestre.numero} ${filliere.niveau} ${filliere.name} !`;
+
   if (gp) {
-    return next(
-      new AppError(
-        `${semestre.filliere.niveau} ${semestre.filliere.name} S${semestre.numero} G${req.body.name} existe déja !`,
-        404
-      )
-    );
+    return next(new AppError(ms, 404));
   }
   group.semestre = req.body.semestre;
   group.name = req.body.name;
@@ -170,7 +178,7 @@ exports.getGroupById = catchAsync(async (req, res, next) => {
 
 exports.deleteGroup = catchAsync(async (req, res, next) => {
   const id = req.params.id;
-  const group = await Group.findOneAndDelete(id);
+  const group = await Group.findOneAndDelete({ _id: id });
   if (!group) {
     return next(
       new AppError(
@@ -203,7 +211,6 @@ exports.getAllGroupsInFilliere = catchAsync(async (req, res, next) => {
   }
 
   let all_groups = [];
-  let group_names = [];
   let semestre_names = [];
   let groups = [];
   for (x of semestres) {
@@ -217,31 +224,14 @@ exports.getAllGroupsInFilliere = catchAsync(async (req, res, next) => {
       for (y of gps) {
         let data = {
           niveau: filliere.niveau,
-          semestre_id: x._id,
+          semestre: x._id,
           semestre_numero: x.numero,
-          group_id: y._id,
-          group_name: y.name,
+          _id: y._id,
+          name: y.name,
         };
         all_groups.push(data);
-        let td = {
-          name: y.name,
-          group_id: y._id,
-        };
-        group_names.push(td);
         groups.push(y);
       }
-    }
-  }
-  const group_enum = ["ALL", "A", "B", "C", "D", "E"];
-
-  for (v of group_enum) {
-    let res = group_names.find((itm) => itm.name == v);
-    if (!res) {
-      let vv = {
-        name: v,
-        group_id: "",
-      };
-      group_names.push(vv);
     }
   }
 
@@ -253,9 +243,6 @@ exports.getAllGroupsInFilliere = catchAsync(async (req, res, next) => {
     message,
     semestre_names,
     all_groups,
-    groups,
-    group_names,
-    semestres,
     filliere: filliere.name,
     description: filliere.description,
     niveau: filliere.niveau,
@@ -273,6 +260,7 @@ exports.getGroupEmplois = catchAsync(async (req, res, next) => {
       )
     );
   }
+  let group_info = await group.getSNumero_FId_FName_FNiveau_NiveauAnnee();
   const semestre = await Semestre.findById(group.semestre);
   const filliere = await Filliere.findById(semestre.filliere);
   const emplois_list = await Emploi.aggregate([
@@ -320,11 +308,12 @@ exports.getGroupEmplois = catchAsync(async (req, res, next) => {
       startTime: x.startTime,
       finishTime: x.finishTime,
       dayNumero: x.dayNumero,
-      professeur_id: dt[0],
-      matiere_id: dt[2],
-      professeur: dt[1],
-      matiere: dt[3],
-      types: x.types,
+      professeur_id: x.professeur,
+      matiere_id: x.matiere,
+      professeur: dt[0],
+      matiere: dt[1],
+      type: x.type,
+      nbh: x.nbh,
     };
     emplois.push(data);
   }
@@ -332,7 +321,10 @@ exports.getGroupEmplois = catchAsync(async (req, res, next) => {
     status: "succés",
     filliere: filliere.name,
     description: filliere.description,
+    annee: group_info[4],
+    semestre: group_info[0],
     niveau: filliere.niveau,
+    group: group.name,
     emplois,
   });
 });

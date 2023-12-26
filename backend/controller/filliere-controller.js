@@ -56,6 +56,7 @@ exports.addFilliere = catchAsync(async (req, res, next) => {
 
   res.status(200).json({
     status: "succès",
+    message: `La filière est ajouté avec succés .`,
     filliere,
   });
 });
@@ -84,13 +85,14 @@ exports.updateFilliere = catchAsync(async (req, res, next) => {
   }
   res.status(201).json({
     status: "succès",
+    message: `La filière est modifié avec succés .`,
     filliere: filliere,
   });
 });
 /* ================================================ DELETE================================================ */
 exports.deleteFilliere = catchAsync(async (req, res, next) => {
   const id = req.params.id;
-  const filliere = await Filliere.findOneAndDelete(id);
+  const filliere = await Filliere.findOneAndDelete({ _id: id });
   if (!filliere) {
     return next(
       new AppError("La filière avec cet identifiant introuvable !", 404)
@@ -105,7 +107,7 @@ exports.deleteFilliere = catchAsync(async (req, res, next) => {
 exports.getFilliere = catchAsync(async (req, res, next) => {
   const id = req.params.id;
   const filliere = await Filliere.findById(id);
-  let filliere_info = await filliere.getInformation();
+  let filliere_info = await filliere.getPeriodePlace();
   if (!filliere) {
     return next(
       new AppError("La filière avec cet identifiant introuvable !", 404)
@@ -121,7 +123,6 @@ exports.getFilliere = catchAsync(async (req, res, next) => {
 exports.getFilliereDetail = catchAsync(async (req, res, next) => {
   const id = req.params.id;
   const filliere = await Filliere.findById(id);
-  let filliere_info = await filliere.getInformation();
   let list_semestres = [];
   if (!filliere) {
     return next(
@@ -138,7 +139,6 @@ exports.getFilliereDetail = catchAsync(async (req, res, next) => {
   const data = await getFilliereSemestresElements(semestres, filliere);
   res.status(200).json({
     status: "succès",
-
     _id: filliere._id,
     filliere: filliere.name,
     description: filliere.description,
@@ -147,33 +147,23 @@ exports.getFilliereDetail = catchAsync(async (req, res, next) => {
     elements: data,
   });
 });
-/* exports.getFilliereDetail = catchAsync(async (req, res, next) => {
-  const id = req.params.id;
-  const elements = await Element.find({ filliere: id })
-    .sort({ semestre: 1, code_EM: 1 })
-    .populate([{ path: "matiere" }]);
-  res.status(200).json({
-    status: "succès",
-    elements,
-  });
-}); */
 
 /* -----------------------------------------------------------FUNCTIONS----------------------- */
 /* 1) GET SEMESTRE WITH ELEMENTS  ----------------------------*/
 async function getFilliereSemestresElements(semestres, filliere) {
   let data = [];
-  let filliere_info = await filliere.getInformation();
+  let filliere_info = await filliere.getPeriodePlace();
   if (Array.isArray(semestres)) {
     for (const s of semestres) {
       if (Array.isArray(s.elements)) {
         for (const el of s.elements) {
           try {
             const matiere = await Matiere.findById(el);
-            let matiere_info = await matiere.getInformation();
+            let matiere_info = await matiere.getCodePrixCNameCCode();
             let code =
-              matiere_info[4] +
+              matiere_info[3] +
               (await s.numero) +
-              filliere_info[5] +
+              filliere_info[1] +
               matiere.numero;
             let element = new FilliereDetail(
               s._id,

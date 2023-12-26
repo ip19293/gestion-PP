@@ -19,9 +19,13 @@ const paiementSchema = mongoose.Schema(
     professeur: {
       type: mongoose.Schema.ObjectId,
       ref: "Professeur",
-      required: [true, "professeur is required"],
+      required: [true, "professeur est requis !"],
     },
     nbh: {
+      type: Number,
+      select: true,
+    },
+    th: {
       type: Number,
       select: true,
     },
@@ -69,5 +73,10 @@ paiementSchema.pre("validate", async function (next) {
     next(error);
   }
 });
-
+paiementSchema.methods.setConfirmation = function (value) {
+  this.confirmation = value;
+};
+paiementSchema.methods.setStatus = function (value) {
+  this.status = value;
+};
 module.exports = mongoose.model("Paiement", paiementSchema);

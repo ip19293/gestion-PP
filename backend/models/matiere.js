@@ -7,6 +7,7 @@ const matiereSchema = mongoose.Schema(
       type: String,
       required: [true, "matiere nom is required"],
       unique: true,
+      lowercase: true,
       trim: true,
     },
 
@@ -97,13 +98,13 @@ matiereSchema.pre("validate", async function (next) {
     next(error);
   }
 });
-matiereSchema.methods.getInformation = async function () {
+matiereSchema.methods.getCodePrixCNameCCode = async function () {
   const Categorie = require("../models/categorie");
   const categorie = await Categorie.findById(this.categorie);
-  let categorie_info = await categorie.getInformation();
+  let categorie_info = await categorie.getCodeNbmatieres();
   let code = categorie_info[0] + this.numero;
-  let code_categorie = categorie_info[0];
-  return [categorie._id, categorie.name, code, categorie.prix, code_categorie];
+
+  return [code, categorie.prix, categorie.name, categorie_info[0]];
 };
 
 module.exports = mongoose.model("Matiere", matiereSchema);

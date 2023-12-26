@@ -17,10 +17,15 @@ const semestreSchema = mongoose.Schema(
         // this only works on CREATE and SAVE!!!
         validator: async function (el) {
           const filliere = await Filliere.findById(this.filliere);
-          let filliere_info = await filliere.getInformation();
-          return el <= 2 * filliere_info[4];
+          let filliere_info = await filliere.getPeriodePlace();
+          let periode = 2 * filliere_info[0];
+          return el <= periode;
         },
-        message: `Seulement 4 semestres en master !`,
+        message: function () {
+          let periode = this.periode;
+          let niveau = this.filliere.niveau;
+          return `Seulement  ${periode} semestres dans ${niveau} !`;
+        },
       },
     },
     start: {
@@ -100,5 +105,17 @@ semestreSchema.post("save", async function (semestre) {
   console.log(`${semestre}`);
 });
 /* ------------------------------------------------------------------------------------------ */
-
+semestreSchema.methods.getNiveauAnnee = async function () {
+  const Filliere = require("./filliere");
+  const filliere = await Filliere.findById(this.filliere);
+  let niveau = filliere.niveau.charAt(0).toUpperCase();
+  let anne = 1;
+  if (this.numero > 4) {
+    anne = 3;
+  }
+  if (2 < this.numero && this.numero <= 4) {
+    anne = 2;
+  }
+  return niveau + anne;
+};
 module.exports = mongoose.model("Semestre", semestreSchema);

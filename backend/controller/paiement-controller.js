@@ -1,5 +1,6 @@
 const APIFeatures = require("../utils/apiFeatures");
 const Paiement = require("../models/paiement");
+const Cours = require("../models/cours");
 const Professeur = require("../models/professeur");
 const catchAsync = require("../utils/catchAsync");
 const AppError = require("../utils/appError");
@@ -18,7 +19,7 @@ exports.getPaiements = catchAsync(async (req, res, next) => {
   let paiements = [];
   for (elem of paiements_list) {
     let professeur = await Professeur.findById(elem.professeur);
-    let prof_info = await professeur.getInformation();
+    let prof_info = await professeur.getInfo_Nbh_TH_Nbc_Somme();
     let data = {
       _id: elem._id,
       date: elem.date,
@@ -26,6 +27,7 @@ exports.getPaiements = catchAsync(async (req, res, next) => {
       toDate: elem.toDate,
       nbh: elem.nbh,
       nbc: elem.nbc,
+      th: elem.th,
       totalMontant: elem.totalMontant,
       status: elem.status,
       confirmation: elem.confirmation,
@@ -49,13 +51,11 @@ exports.addPaiement = catchAsync(async (req, res, next) => {
   const data = req.body;
   const paiement_prof = await Paiement.findOne({
     professeur: req.body.professeur,
+    fromDate: req.body.fromDate,
+    toDate: req.body.toDate,
   });
-  if (
-    (paiement_prof.fromDate <= req.body.fromDate &&
-      paiement_prof.toDate >= req.body.fromDate) ||
-    (paiement_prof.fromDate <= req.body.toDate &&
-      paiement_prof.toDate >= req.body.toDate)
-  ) {
+
+  if (paiement_prof) {
     return next(
       new AppError(
         "Intersection de la période de début ou de fin avec une autre",
@@ -64,9 +64,19 @@ exports.addPaiement = catchAsync(async (req, res, next) => {
     );
   }
   const paiement = await Paiement.create(data);
+  const filter = {
+    date: { $gte: req.body.fromDate, $lte: req.body.toDate },
+    professeur: data.professeur,
+    isSigned: "oui",
+    isPaid: "pas encore",
+  };
+  let up_cours = await Cours.updateMany(filter, {
+    $set: { isPaid: "préparée" },
+  });
 
   res.status(200).json({
     status: "success",
+    message: `La facture de paiement est crée et envoié a la professeur corespondant ...`,
     paiement,
   });
 });
@@ -77,13 +87,10 @@ exports.updatePaiement = catchAsync(async (req, res, next) => {
   const paiement_prof = await Paiement.findOne({
     _id: { $ne: id },
     professeur: req.body.professeur,
+    fromDate: req.body.fromDate,
+    toDate: req.body.toDate,
   });
-  if (
-    (paiement_prof.fromDate <= req.body.fromDate &&
-      paiement_prof.toDate >= req.body.fromDate) ||
-    (paiement_prof.fromDate <= req.body.toDate &&
-      paiement_prof.toDate >= req.body.toDate)
-  ) {
+  if (paiement_prof) {
     return next(
       new AppError(
         "Intersection de la période de début ou de fin avec une autre",
@@ -96,7 +103,9 @@ exports.updatePaiement = catchAsync(async (req, res, next) => {
     runValidators: true,
   });
   if (!paiement) {
-    return next(new AppError("No paiement found with that ID", 404));
+    return next(
+      new AppError("Aucun object trouvé avec cet identifiant !", 404)
+    );
   }
   res.status(201).json({
     status: "success",
@@ -110,8 +119,19 @@ exports.deletePaiement = catchAsync(async (req, res, next) => {
   const paiement = await Paiement.findById(id);
 
   if (!paiement) {
-    return next(new AppError("No paiement found with that ID", 404));
+    return next(
+      new AppError("Aucun object trouvé avec cet identifiant !", 404)
+    );
   }
+  const filter = {
+    date: { $gte: paiement.fromDate, $lte: paiement.toDate },
+    professeur: paiement.professeur,
+    isSigned: "oui",
+    isPaid: "préparée",
+  };
+  let up_cours = await Cours.updateMany(filter, {
+    $set: { isPaid: "pas encore" },
+  });
   const deleted_paiement = await Paiement.findOneAndDelete(id);
   res.status(200).json({
     status: "success",
@@ -124,7 +144,7 @@ exports.getPaiementById = catchAsync(async (req, res, next) => {
   const id = req.params.id;
   const paiement = await Paiement.findById(id);
   if (!paiement) {
-    return next(new AppError("No paiement found with that ID", 404));
+    return next(new AppError("Aucun object trouvé avec cet ID !", 404));
   }
   res.status(200).json({
     status: "success",

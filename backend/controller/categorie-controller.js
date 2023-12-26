@@ -17,14 +17,14 @@ exports.getCategories = catchAsync(async (req, res, next) => {
   const categories_list = await features.query;
   let categories = [];
   for (elem of categories_list) {
-    let categorie_info = await elem.getInformation();
+    let categorie_info = await elem.getCodeNbmatieres();
     let data = {
-      _id: categorie_info[2],
-      name: categorie_info[3],
-      description: categorie_info[4],
-      prix: categorie_info[5],
-      nb_matieres: categorie_info[1],
+      _id: elem._id,
+      name: elem.name,
+      description: elem.description,
+      prix: elem.prix,
       code: categorie_info[0],
+      nb_matieres: categorie_info[1],
     };
     categories.push(data);
   }
@@ -94,7 +94,7 @@ exports.deleteCategorie = catchAsync(async (req, res, next) => {
       new AppError("Aucune catégorie trouvée avec cet identifiant !", 404)
     );
   }
-  const deleted_categorie = await Categorie.findOneAndDelete(id);
+  const deleted_categorie = await Categorie.findOneAndDelete({ _id: id });
   res.status(200).json({
     status: "succès",
     message: deleted_categorie.name,

@@ -1,23 +1,5 @@
 /* ====================================================================VERIFICATION EMPLOI BEFORE ADDET OR EDIT=====================*/
-const types_TO_th_nbh_nbm_thsm = (types) => {
-  let th = 0;
-  let nbh = 0;
-  let nbm = 0;
-  let thsm = 0;
-  types.forEach((e) => {
-    if (e.name == "CM") {
-      th = th + e.nbh;
-    }
-    if (e.name == "TD" || e.name == "TP") {
-      th = th + (e.nbh * 2) / 3;
-    }
-    thsm = th + thsm;
-    nbh = nbh + e.nbh;
-  });
-  nbm = (nbh % 1) * 60;
 
-  return [th, nbh, nbm, thsm];
-};
 function createFinishTimeFromStartTimeAndVerifiedIsBetweenT1AndT2(
   add_emploi,
   emplois_list_day,
@@ -29,21 +11,16 @@ function createFinishTimeFromStartTimeAndVerifiedIsBetweenT1AndT2(
   let minute = parseInt(input[1]);
   const strtDate = new Date();
   strtDate.setHours(hour, minute, 0);
-  let dt = types_TO_th_nbh_nbm_thsm(add_emploi.types);
-  let nbh = dt[1];
-  let nbm = dt[2];
+  let nbm = (add_emploi.nbh % 1) * 60;
   const fnshDate = new Date();
-  fnshDate.setHours(hour + nbh, minute + nbm, 0);
+  fnshDate.setHours(hour + add_emploi.nbh, minute + nbm, 0);
   let finishTime = "";
   if (fnshDate.getMinutes() < 10) {
     finishTime = fnshDate.getHours() + ":0" + fnshDate.getMinutes();
   } else {
     finishTime = fnshDate.getHours() + ":" + fnshDate.getMinutes();
   }
-  /*  let hourF = parseInt(hour + nbh);
-  let minuteF = minute + nbm;
-  let fnshTime = hourF + ":" + minuteF; */
-  /* -----------------------------------------Add start time and finish time convert to number of minutes ---*/
+
   const add_emploi_strtDate_Minutes = timeToMinutes(add_emploi.startTime);
   const add_emploi_fnshDate_Minutes = timeToMinutes(finishTime);
   console.log(
@@ -59,14 +36,8 @@ function createFinishTimeFromStartTimeAndVerifiedIsBetweenT1AndT2(
     let minute = parseInt(input[1]);
     const strtDate = new Date();
     strtDate.setHours(hour, minute, 0);
-    let dt = types_TO_th_nbh_nbm_thsm(elem.types);
-    let nbh = dt[1];
-    let nbm = dt[2];
-    const fnshDate = new Date();
-    console.log(
-      `${minute + nbm}------------------------------------------------s`
-    );
-    fnshDate.setHours(hour + nbh, minute + nbm, 0);
+    let nbm = (elem.nbh % 1) * 60;
+    fnshDate.setHours(hour + elem.nbh, minute + nbm, 0);
     let finishTime = "";
     if (fnshDate.getMinutes() < 10) {
       finishTime = fnshDate.getHours() + ":0" + fnshDate.getMinutes();

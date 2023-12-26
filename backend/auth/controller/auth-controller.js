@@ -28,7 +28,8 @@ const createSendToken = (user, statusCode, res) => {
   user.password = undefined;
 
   res.status(statusCode).json({
-    status: "success",
+    status: "succéss",
+    message: "Votre comple est crée avec succéss .",
     token,
     data: {
       user: user,
@@ -37,57 +38,35 @@ const createSendToken = (user, statusCode, res) => {
 };
 exports.singup = catchAsync(async (req, res, next) => {
   let newUser;
-  if (!req.body.role || req.body.role != "admin") {
-    newUser = await User.create({
-      nom: req.body.nom,
-      prenom: req.body.prenom,
-      mobile: req.body.mobile,
-      password: req.body.password,
-      email: req.body.email,
-      passwordConfirm: req.body.passwordConfirm,
-      passwordChangedAt: req.body.passwordChangedAt,
-      role: req.body.role,
-    });
-    if (req.body.role == "professeur") {
-      let professeur;
-      professeur = await Professeur.findOne({ email: req.body.email });
-      if (!professeur) {
-        professeur = new Professeur({
+  let professeur;
+  let query =
+    req.body.role !== undefined && req.body.role !== "admin"
+      ? {
           nom: req.body.nom,
           prenom: req.body.prenom,
           mobile: req.body.mobile,
+          password: req.body.password,
           email: req.body.email,
-          user: newUser._id,
-        });
-        professeur = await professeur.save();
-      } else {
-        professeur = await Professeur.findByIdAndUpdate(
-          professeur._id,
-          {
-            nom: req.body.nom,
-            prenom: req.body.prenom,
-            mobile: req.body.mobile,
-            email: req.body.email,
-            user: newUser._id,
-          },
-          {
-            new: true,
-            runValidators: true,
-          }
-        );
-      }
-    }
-  } else {
-    newUser = await User.create({
-      nom: req.body.nom,
-      prenom: req.body.prenom,
-      mobile: req.body.mobile,
-      password: req.body.password,
-      email: req.body.email,
-      passwordConfirm: req.body.passwordConfirm,
-      passwordChangedAt: req.body.passwordChangedAt,
+          passwordConfirm: req.body.passwordConfirm,
+          passwordChangedAt: req.body.passwordChangedAt,
+          role: req.body.role,
+        }
+      : {
+          nom: req.body.nom,
+          prenom: req.body.prenom,
+          mobile: req.body.mobile,
+          password: req.body.password,
+          email: req.body.email,
+          passwordConfirm: req.body.passwordConfirm,
+          passwordChangedAt: req.body.passwordChangedAt,
+        };
+  newUser = await User.create(query);
+  if (req.body.role == "professeur") {
+    professeur = await Professeur.create({
+      user: newUser._id,
     });
   }
+
   createSendToken(newUser, 201, res);
 });
 
@@ -96,7 +75,12 @@ exports.login = catchAsync(async (req, res, next) => {
   const password = req.body.password;
   // 1) check if email and password exist
   if (!email || !password) {
-    return next(new AppError("Please provide email and password!", 400));
+    return next(
+      new AppError(
+        "Veuillez fournir votre adresse e-mail et votre mot de passe!",
+        400
+      )
+    );
   }
 
   // 2) check if user exists && password is correct
@@ -104,12 +88,15 @@ exports.login = catchAsync(async (req, res, next) => {
     .select("+password")
     .select("+active");
   if (!user || !(await user.correctPassword(password, user.password))) {
-    return next(new AppError("Incorrect Email or Password", 401));
+    return next(new AppError("E-mail ou mot de passe incorrect !", 401));
   }
 
   if (user.active == false) {
     return next(
-      new AppError("Your compte is desactive , Plaese contacted the admin", 401)
+      new AppError(
+        "Votre compte est désactivé, veuillez contacter l'administrateur !",
+        401
+      )
     );
   }
   // 3) send token to client if verification is ok
@@ -127,7 +114,9 @@ exports.protect = catchAsync(async (req, res, next) => {
   }
   //console.log(token);
   if (!token) {
-    return next(new AppError("Please login first to get access !!", 401));
+    return next(
+      new AppError("Veuillez d'abord vous authentifiez pour y accéder !!", 401)
+    );
   }
   // 2) Verification token
 
@@ -137,12 +126,15 @@ exports.protect = catchAsync(async (req, res, next) => {
   // 3) check if user still exists
   const fresUser = await User.findById(decoded.id);
   if (!fresUser) {
-    return next(new AppError("The user is not exist !!", 401));
+    return next(new AppError("L'utilisateur n'existe pas !!", 401));
   }
   // 4) check if user changed password after the token was iss
   if (fresUser.changedPasswordAfter(decoded.iat)) {
     return next(
-      new AppError("User recently changed password .Please login again !", 401)
+      new AppError(
+        "L'utilisateur a récemment changé de mot de passe veuillez vous reconnecter !",
+        401
+      )
     );
   }
   // GRANT ACCESS TO PROTECTED ROUTE
@@ -154,7 +146,10 @@ exports.restricTo = (...roles) => {
   return (req, res, next) => {
     if (!roles.includes(req.user.role)) {
       return next(
-        new AppError("You dont have a permission to perform this action !", 403)
+        new AppError(
+          "Vous n'avez pas la permission d'effectuer cette action !",
+          403
+        )
       );
     }
 
@@ -167,7 +162,9 @@ exports.forgotPassword = catchAsync(async (req, res, next) => {
   const user = await User.findOne({ email: req.body.email });
 
   if (!user) {
-    return next(new AppError("There is no user with email address", 404));
+    return next(
+      new AppError("Il n'ya pas d'utilisateur avec cet addresse e-email ", 404)
+    );
   }
   // 2) Generate the random reset
   const resetToken = user.createPasswordResetToken();
@@ -176,25 +173,28 @@ exports.forgotPassword = catchAsync(async (req, res, next) => {
   const resetURL = `${req.protocol}://${req.get(
     "host"
   )}/auth/resetPassword/${resetToken}`;
-  const message = `Forgot your password? Submit a PATH request with your new password and passwordConfirm to: ${resetURL}.\n
-  if you not forgot password please ignore this Email
+  const message = `Mot de passe oublié ? Soumettez une demande de chemin avec votre nouveau mot de passe et mot de passe confirm a: ${resetURL}.\n
+  si vous n'oubliez pas le mot de passe veuillez ignorer cet e=mail
   `;
 
   try {
     await sendEmail({
       email: user.email,
-      subject: "Your password reset token (valid for 10 min)",
+      subject:
+        "Votre jeton de réinitialisation du mot de passe (valide pendant 10 minutes)",
       message,
     });
     res.status(200).json({
-      status: "success",
-      message: "Token send to email",
+      status: "succéss",
+      message: "Le jeton est envoyé par e-mail",
     });
   } catch (error) {
     user.passwordResetToken = undefined;
     user.passwordResetExpires = undefined;
     await user.save({ validateBeforeSave: false });
-    return next(new AppError("failed to send email .Try again later!", 500));
+    return next(
+      new AppError("échec de l'envoi de l'e-mail . réessayez plus tard !", 500)
+    );
   }
 });
 exports.resetPassword = catchAsync(async (req, res, next) => {
@@ -211,7 +211,7 @@ exports.resetPassword = catchAsync(async (req, res, next) => {
 
   // 2 if token has not exipired and there is user set the new password
   if (!user) {
-    return next(new AppError("Token is invalid or has expired", 400));
+    return next(new AppError("Le jeton n'est pas valide ou expiré", 400));
   }
   user.password = req.body.password;
   (user.passwordConfirm = req.body.passwordConfirm),
@@ -232,7 +232,7 @@ exports.updatePassword = catchAsync(async (req, res, next) => {
   // 2 check if Posted current password is correct
 
   if (!(await user.correctPassword(req.body.passwordCurrent, user.password))) {
-    return next(new AppError("Your current password is wrong !", 401));
+    return next(new AppError("Votre mot de passe actuel est incorrect !", 401));
   }
   // 3 if so update password
   user.password = req.body.password;

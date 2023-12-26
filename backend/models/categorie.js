@@ -1,6 +1,7 @@
 const mongoose = require("mongoose");
 const professeur = require("./professeur");
 const schema = mongoose.Schema;
+const AppError = require("../utils/appError");
 const categorieSchema = mongoose.Schema(
   {
     name: {
@@ -20,32 +21,14 @@ const categorieSchema = mongoose.Schema(
       type: Number,
       required: [true, "le prix est requis !"],
       default: 100,
-      min: 100,
-      max: 900,
+      min: [100, "Le prix doi etre supperiére a 100 !"],
+      max: [900, "Le prix doi etre inferiére a 900 !"],
     },
   },
   { timestamps: true }
 );
 
-/* categorieSchema.methods.getCategorieCode = function () {
-  let categorie_code = "";
-  let categorie_elements = this.name.split(" ");
-  if (!categorie_elements[1]) {
-    categorie_code = categorie_elements[0].substr(0, 3).toLocaleUpperCase();
-  } else if (categorie_elements[1] && !categorie_elements[2]) {
-    categorie_code =
-      categorie_elements[0].substr(0, 2).toLocaleUpperCase() +
-      categorie_elements[1].substr(0, 1).toLocaleUpperCase();
-  } else {
-    categorie_elements.forEach((element) => {
-      categorie_code =
-        categorie_code + element.substr(0, 1).toLocaleUpperCase();
-    });
-    console.log(categorie_code);
-  }
-  return categorie_code;
-}; */
-categorieSchema.methods.getInformation = async function () {
+categorieSchema.methods.getCodeNbmatieres = async function () {
   const Matiere = require("./matiere");
   nb_matieres = await Matiere.find({ categorie: this._id }).count();
   let categorie_code = "";
@@ -63,15 +46,9 @@ categorieSchema.methods.getInformation = async function () {
     });
     console.log(categorie_code);
   }
-  return [
-    categorie_code,
-    nb_matieres,
-    this._id,
-    this.name,
-    this.description,
-    this.prix,
-  ];
+  return [categorie_code, nb_matieres];
 };
+
 categorieSchema.post("findOneAndDelete", async function (categorie, message) {
   console.log(" categorie remove midleweere work ....................");
   const Matiere = require("./matiere");
@@ -125,10 +102,3 @@ categorieSchema.post("findOneAndDelete", async function (categorie, message) {
 });
 
 module.exports = mongoose.model("Categorie", categorieSchema);
-/* ===================================================================FONCTIONS================ */
-/* async function deleteMatieres(categorie) {
-  const Matiere = require("./matiere");
-
-  await Matiere.deleteMany({ categorie: categorie });
-}
- */

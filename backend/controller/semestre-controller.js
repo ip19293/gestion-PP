@@ -103,7 +103,7 @@ exports.updateSemestre = catchAsync(async (req, res, next) => {
 
 exports.deleteSemestre = catchAsync(async (req, res, next) => {
   const id = req.params.id;
-  const semestre = await Semestre.findOneAndDelete(id);
+  const semestre = await Semestre.findOneAndDelete({ _id: id });
   if (!semestre) {
     return next(
       new AppError("Le semestre avec cet identifiant introuvable !", 404)
@@ -228,12 +228,12 @@ exports.getSemestreElements = catchAsync(async (req, res, next) => {
     );
   }
   let elements = [];
-  const filliere_info = await filliere.getInformation();
+  const filliere_info = await filliere.getPeriodePlace();
   for (s of semestre.elements) {
     let matiere = await Matiere.findById(s);
-    let matiere_info = await matiere.getInformation();
+    let matiere_info = await matiere.getCodePrixCNameCCode();
     let code =
-      matiere_info[4] + (await s.numero) + filliere_info[5] + matiere.numero;
+      matiere_info[3] + (await s.numero) + filliere_info[1] + matiere.numero;
     let data = {
       id: s,
       name_EM: matiere.name,
@@ -246,31 +246,3 @@ exports.getSemestreElements = catchAsync(async (req, res, next) => {
     elements,
   });
 });
-/* =========================================================GET  */
-/* -----------------------------------------------------------FUNCTIONS----------------------- */
-/* 1) GET SEMESTRE WITH ELEMENTS  ----------------------------*/
-/* async function getSemestreElements(semestre) {
-  const data = [];
-  for (const e of semestre.elements) {
-    try {
-      const matiere = await Matiere.findById(e);
-      let matiere_info = await matiere.getInformation();
-      let code =
-        matiere_info[4] + (await s.numero) + LMD_numero + matiere.numero;
-      let semestre = {
-        semestre_id: semestre._id,
-        semestre_numero: semestre.numero,
-        semestre: "S" + semestre.numero,
-        filliere: semestre.filliere.name,
-        debit_semestre: semestre.start,
-        fin_semestre: semestre.finish,
-        code_EM: [e, code, matiere.name],
-      };
-
-      data.push(s);
-    } catch (error) {
-      console.log("Error:", error);
-    }
-  }
-  return data;
-} */

@@ -79,7 +79,8 @@ exports.addEmploi = catchAsync(async (req, res, next) => {
 
   /* ------------------------------------------------------ */
   let emploi = new Emploi({
-    types: req.body.types,
+    type: req.body.type,
+    nbh: req.body.nbh,
     startTime: req.body.startTime,
     professeur: req.body.professeur,
     matiere: req.body.matiere,
@@ -140,7 +141,8 @@ exports.updateEmploi = async (req, res, next) => {
     return next(new AppError(`${result[1]}`, 404));
   }
 
-  emploi.types = req.body.types;
+  emploi.type = req.body.type;
+  emploi.nbh = req.body.nbh;
   emploi.startTime = req.body.startTime;
   emploi.professeur = req.body.professeur;
   emploi.matiere = req.body.matiere;
@@ -157,7 +159,7 @@ exports.updateEmploi = async (req, res, next) => {
 /* =============================================================REMOVE BY ID======================================= */
 exports.deleteEmploi = catchAsync(async (req, res, next) => {
   const id = req.params.id;
-  const emploi = await Emploi.findByIdAndDelete(id);
+  const emploi = await Emploi.findByIdAndDelete({ _id: id });
   if (!emploi) {
     return next(
       new AppError("Aucun emploi trouvé avec cet identifiant !", 404)
