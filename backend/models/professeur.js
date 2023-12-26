@@ -11,12 +11,20 @@ const professeurSchema = mongoose.Schema(
     ],
     banque: {
       type: String,
+      required: true,
       default: "BMCI",
     },
 
     accountNumero: {
       type: Number,
       unique: true,
+      required: true,
+      validate: {
+        validator: function (value) {
+          return value.toString().length === 10;
+        },
+        message: "Le numéro de compte doit avoir une longueur de 10 chiffres !",
+      },
     },
 
     user: {

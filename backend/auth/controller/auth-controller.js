@@ -60,10 +60,30 @@ exports.singup = catchAsync(async (req, res, next) => {
           passwordConfirm: req.body.passwordConfirm,
           passwordChangedAt: req.body.passwordChangedAt,
         };
+  if (req.body.role == "professeur") {
+    const prof = await Professeur.findOne({
+      accountNumero: req.body.accountNumero,
+    });
+    if (prof) {
+      return next(
+        new AppError("Veuillez vérifier votre numéro de compte banque !", 400)
+      );
+    }
+    if (req.body.accountNumero.toString().length !== 10) {
+      return next(
+        new AppError(
+          " Le numéro de compte doit avoir une longueur de 10 chiffres !",
+          400
+        )
+      );
+    }
+  }
   newUser = await User.create(query);
   if (req.body.role == "professeur") {
     professeur = await Professeur.create({
       user: newUser._id,
+      accountNumero: req.body.accountNumero,
+      banque: req.body.banque,
     });
   }
 
