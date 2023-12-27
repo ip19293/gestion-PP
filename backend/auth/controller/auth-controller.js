@@ -12,7 +12,7 @@ const signToken = (id) => {
   });
 };
 
-const createSendToken = (user, statusCode, res) => {
+const createSendToken = (user, statusCode, res, message) => {
   const token = signToken(user._id);
   const cookieOptions = {
     exprires: new Date(
@@ -29,7 +29,7 @@ const createSendToken = (user, statusCode, res) => {
 
   res.status(statusCode).json({
     status: "succéss",
-    message: "Votre comple est crée avec succéss .",
+    message: message,
     token,
     data: {
       user: user,
@@ -37,6 +37,7 @@ const createSendToken = (user, statusCode, res) => {
   });
 };
 exports.singup = catchAsync(async (req, res, next) => {
+  let message = "";
   let newUser;
   let professeur;
   let query =
@@ -86,11 +87,12 @@ exports.singup = catchAsync(async (req, res, next) => {
       banque: req.body.banque,
     });
   }
-
-  createSendToken(newUser, 201, res);
+  message = "Votre comple est crée avec succéss .";
+  createSendToken(newUser, 201, res, message);
 });
 
 exports.login = catchAsync(async (req, res, next) => {
+  let message = "";
   const email = req.body.email;
   const password = req.body.password;
   // 1) check if email and password exist
@@ -119,8 +121,9 @@ exports.login = catchAsync(async (req, res, next) => {
       )
     );
   }
+  message = `Bienvenue ${user.role}`;
   // 3) send token to client if verification is ok
-  createSendToken(user, 200, res);
+  createSendToken(user, 200, res, message);
 });
 
 exports.protect = catchAsync(async (req, res, next) => {
@@ -218,6 +221,7 @@ exports.forgotPassword = catchAsync(async (req, res, next) => {
   }
 });
 exports.resetPassword = catchAsync(async (req, res, next) => {
+  let message = "";
   // 1 Get user based on the token
   const hashedToken = crypto
     .createHash("sha256")
@@ -241,10 +245,11 @@ exports.resetPassword = catchAsync(async (req, res, next) => {
   await user.save();
   // 3 Update changedPasswordAt property for user
   // 4 log the user in send JWT
-
-  createSendToken(user, 200, res);
+  message = `Le mot passe est réinitialiser avec succéss .`;
+  createSendToken(user, 200, res, message);
 });
 exports.updatePassword = catchAsync(async (req, res, next) => {
+  let message = "";
   // 1 Get user from collection
 
   const user = await User.findById(req.user._id).select("+password");
@@ -259,6 +264,6 @@ exports.updatePassword = catchAsync(async (req, res, next) => {
   user.passwordConfirm = req.body.passwordConfirm;
   await user.save();
   // log user in send JWT
-
-  createSendToken(user, 200, res);
+  message = `Le mot de passe est modifié avec succéss .`;
+  createSendToken(user, 200, res, message);
 });
