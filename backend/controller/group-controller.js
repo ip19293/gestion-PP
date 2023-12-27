@@ -301,6 +301,7 @@ exports.getGroupEmplois = catchAsync(async (req, res, next) => {
   for (x of emplois_list) {
     let em = await Emploi.findById(x._id);
     let dt = await em.getProfesseurMatiere();
+
     let data = {
       id: x._id,
       group: x.group,
@@ -310,8 +311,8 @@ exports.getGroupEmplois = catchAsync(async (req, res, next) => {
       dayNumero: x.dayNumero,
       professeur_id: x.professeur,
       matiere_id: x.matiere,
-      professeur: dt[0],
-      matiere: dt[1],
+      professeur: dt[0] + " " + dt[1],
+      matiere: dt[2],
       type: x.type,
       nbh: x.nbh,
     };

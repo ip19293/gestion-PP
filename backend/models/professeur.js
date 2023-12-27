@@ -73,7 +73,18 @@ professeurSchema.post("findOneAndDelete", async function (professeur) {
   await Emploi.deleteMany({ professeur: professeur._id });
   professeur.nomComplet = message;
 });
-
+professeurSchema.methods.getInformation = async function () {
+  const user = await User.findById(this.user);
+  return [
+    this._id,
+    user.nom,
+    user.prenom,
+    user.email,
+    user.mobile,
+    this.banque,
+    this.accountNumero,
+  ];
+};
 professeurSchema.methods.getInfo_Nbh_TH_Nbc_Somme = async function (
   debit,
   fin

@@ -95,9 +95,10 @@ emploiSchema.methods.getDayName = async function (index) {
 };
 emploiSchema.methods.getProfesseurMatiere = async function () {
   const prof = await Professeur.findById(this.professeur);
+  let prof_info = await prof.getInfo_Nbh_TH_Nbc_Somme();
   const matiere = await Matiere.findById(this.matiere);
 
-  let res = [prof.nomComplet, matiere.name];
+  let res = [prof_info[1], prof_info[2], matiere.name];
 
   return res;
 };

@@ -19,12 +19,12 @@ exports.getCours = catchAsync(async (req, res, next) => {
     .sort()
     .limitFields()
     .pagination();
-  const cours_list = await Cours.find();
+  const cours_list = await Cours.find({});
   let cours = [];
   for (x of cours_list) {
     let matiere = await Matiere.findById(x.matiere);
     let professeur = await Professeur.findById(x.professeur);
-    let prof_info = await professeur.getInfo_Nbh_TH_Nbc_Somme();
+    let prof_info = await professeur.getInformation();
     let cour = await Cours.findById(x._id);
     let cour_info = await cour.getTHSomme();
     let data = {
@@ -32,25 +32,26 @@ exports.getCours = catchAsync(async (req, res, next) => {
       categorie_id: matiere.categorie,
       matiere_id: x.matiere,
       professeur_id: x.professeur,
-      matiere: matiere.name,
-      professeur: prof_info[1] + " " + prof_info[2],
-      nbh: x.nbh,
-      TH: cour_info[0],
-      somme: cour_info[1],
       date: x.date,
-      prix: cour_info[7],
-      matiere_prix: cour_info[8],
+      nbh: x.nbh,
+      type: x.type,
       isSigned: x.isSigned,
       isPaid: x.isPaid,
       startTime: x.startTime,
       finishTime: x.finishTime,
-      type: x.type,
+      matiere: matiere.name,
+      professeur: prof_info[1] + " " + prof_info[2],
+      TH: cour_info[0],
+      somme: cour_info[1],
+      prix: cour_info[7],
+      matiere_prix: cour_info[8],
     };
     cours.push(data);
   }
   res.status(200).json({
     status: "succès",
     cours,
+    cours_list,
   });
 });
 

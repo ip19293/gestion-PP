@@ -47,13 +47,22 @@ exports.deleteAllMatieres = catchAsync(async (req, res, next) => {
 });
 exports.getMatieresProf = catchAsync(async (req, res, next) => {
   let filter = {};
-  const professeurs = await Professeur.find({
+  let professeurs = [];
+  const professeurs_list = await Professeur.find({
     matieres: req.params.id,
   });
-
+  for (x of professeurs_list) {
+    let professeur = await Professeur.findById(x._id);
+    let prof_info = await professeur.getInfo_Nbh_TH_Nbc_Somme();
+    let dt = {
+      _id: prof_info[0],
+      nom: prof_info[1],
+      prenom: prof_info[2],
+    };
+    professeurs.push(dt);
+  }
   res.status(200).json({
     status: "succés",
-
     professeurs,
   });
 });
