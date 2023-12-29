@@ -1,6 +1,7 @@
 const express = require("express");
 const courController = require("../controller/cours-controller");
 const autoCreateCoursController = require("../controller/auto-create-cours");
+const createCoursFromEmploiController = require("../controller/create-cours-from-emploi");
 const authController = require("../auth/controller/auth-controller");
 const CoursRouter = express.Router();
 CoursRouter.route("/")
@@ -21,7 +22,7 @@ CoursRouter.route("/paid").get(courController.getPaidCours);
 CoursRouter.route("/auto-create").get(
   authController.protect,
   authController.restricTo("admin"),
-  autoCreateCoursController.auto
+  createCoursFromEmploiController.auto
 );
 CoursRouter.route("/:id/cours").post(courController.getCoursByProfesseursId);
 CoursRouter.route("/:id/signe").patch(courController.signeCours);

@@ -111,5 +111,11 @@ userSchema.methods.createPasswordResetToken = function () {
 
   return resetToken;
 };
-
+userSchema.methods.getProfesseur = async function () {
+  const Professeur = require("../../models/professeur");
+  try {
+    const professeur = await Professeur.findOne({ user: this._id });
+    return professeur;
+  } catch (error) {}
+};
 module.exports = mongoose.model("User", userSchema);

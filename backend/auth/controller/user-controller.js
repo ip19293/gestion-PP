@@ -164,3 +164,21 @@ exports.deleteMe = catchAsync(async (req, res, next) => {
     data: null,
   });
 });
+exports.getProfesseur = catchAsync(async (req, res, next) => {
+  let message = "";
+  let id = req.params.id;
+  const user = await User.findById(id);
+  if (!user) {
+    return next(new AppError("Pas d'utilisateur trouvé !", 400));
+  }
+  const prof = await user.getProfesseur();
+  if (!prof) {
+    return next(new AppError("Pas de Enseignat trouvé !", 400));
+  }
+  message = "L'enseignat responsable de cet utilisateur donnée .";
+  res.status(200).json({
+    status: "success",
+    message: message,
+    prof,
+  });
+});

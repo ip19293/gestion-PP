@@ -32,5 +32,7 @@ emploiRouter
     authController.restricTo("admin", "responsable"),
     emploiController.updateEmploi
   );
-
+emploiRouter
+  .route("/:id/professeur")
+  .get(authController.protect, emploiController.getEmploisByProfesseurId);
 module.exports = emploiRouter;

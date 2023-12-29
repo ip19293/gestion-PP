@@ -31,6 +31,9 @@ router
     userController.updateUser
   );
 router
+  .route("/:id/professeur")
+  .get(authController.protect, userController.getProfesseur);
+router
   .route("/:id/active")
   .patch(
     authController.protect,

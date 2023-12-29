@@ -301,11 +301,11 @@ exports.getGroupEmplois = catchAsync(async (req, res, next) => {
   for (x of emplois_list) {
     let em = await Emploi.findById(x._id);
     let dt = await em.getProfesseurMatiere();
-
+    let day = await em.getDayName();
     let data = {
       id: x._id,
       group: x.group,
-      day: await em.getDayName(x.dayNumero),
+      day: day,
       startTime: x.startTime,
       finishTime: x.finishTime,
       dayNumero: x.dayNumero,

@@ -150,7 +150,7 @@ exports.getProfCours = catchAsync(async (req, res, next) => {
     cours,
   });
 });
-exports.getProfCoursNon = catchAsync(async (req, res, next) => {
+exports.getProfCoursSigned = catchAsync(async (req, res, next) => {
   const id = req.params.id;
   const professeur = await Professeur.findById(id);
   let prof_info = await professeur.getInfo_Nbh_TH_Nbc_Somme();
@@ -159,7 +159,8 @@ exports.getProfCoursNon = catchAsync(async (req, res, next) => {
       new AppError("Aucun enseignant trouvé avec cet identifiant !", 404)
     );
   }
-  const cours_lsit = await Cours.find({ professeur: id, isSigned: "NO" });
+
+  const cours_lsit = await Cours.find({ professeur: id, isSigned: "oui" });
   let cours = [];
   for (x of cours_lsit) {
     let matiere = await Matiere.findById(x.matiere);
@@ -171,13 +172,59 @@ exports.getProfCoursNon = catchAsync(async (req, res, next) => {
       categorie_id: matiere.categorie,
       matiere_id: x.matiere,
       professeur_id: x.professeur,
-      matiere: x.name,
+      matiere: matiere.name,
       professeur: prof_info[1] + " " + prof_info[2],
       email: prof_info[3],
-      nbh: x.nbh,
+      nbh: cour.nbh,
+      type: cour.type,
       TH: cour_info[0],
       somme: cour_info[1],
-      date: x.date,
+      date: cour.date,
+      prix: matiere_info[1],
+      isSigned: x.isSigned,
+      isPaid: x.isPaid,
+      startTime: x.startTime,
+      finishTime: x.finishTime,
+    };
+    cours.push(data);
+  }
+  res.status(200).json({
+    status: "succés",
+    cours,
+  });
+});
+exports.getProfCoursNon = catchAsync(async (req, res, next) => {
+  const id = req.params.id;
+  const professeur = await Professeur.findById(id);
+  let prof_info = await professeur.getInfo_Nbh_TH_Nbc_Somme();
+  if (!professeur) {
+    return next(
+      new AppError("Aucun enseignant trouvé avec cet identifiant !", 404)
+    );
+  }
+  const cours_lsit = await Cours.find({
+    professeur: id,
+    isSigned: "pas encore",
+  });
+  let cours = [];
+  for (x of cours_lsit) {
+    let matiere = await Matiere.findById(x.matiere);
+    let cour = await Cours.findById(x._id);
+    let cour_info = await cour.getTHSomme();
+    let matiere_info = await matiere.getCodePrixCNameCCode();
+    let data = {
+      _id: x._id,
+      categorie_id: matiere.categorie,
+      matiere_id: x.matiere,
+      professeur_id: x.professeur,
+      matiere: matiere.name,
+      professeur: prof_info[1] + " " + prof_info[2],
+      email: prof_info[3],
+      nbh: cour.nbh,
+      type: cour.type,
+      TH: cour_info[0],
+      somme: cour_info[1],
+      date: cour.date,
       prix: matiere_info[1],
       isSigned: x.isSigned,
       isPaid: x.isPaid,
@@ -195,18 +242,28 @@ exports.getProfCoursNon = catchAsync(async (req, res, next) => {
 ///Get Professeur By ID-----------------------------------------------------------------------------------------
 exports.getProfesseurById = catchAsync(async (req, res, next) => {
   const id = req.params.id;
-  const professeur = await Professeur.findById(id);
-  const user = await User.findById(professeur.user);
-  if (!professeur) {
+  const professeur_find = await Professeur.findById(id);
+  if (!professeur_find) {
     return next(
       new AppError("Aucun enseignant trouvé avec cet identifiant !", 404)
     );
   }
+  const prof_info = await professeur_find.getInformation();
+  if (!prof_info) {
+    return next(new AppError("Le donnée de cet enseignant est vide !", 404));
+  }
+  let matieres = await professeur_find.getMatieres();
+
+  const professeur = {
+    _id: professeur_find._id,
+    nom: prof_info[1],
+    prenom: prof_info[2],
+    email: prof_info[3],
+  };
   res.status(200).json({
     status: "succés",
     professeur,
-    user,
-    matieres: await professeur.getMatieres(),
+    matieres: matieres,
   });
 });
 ///Get Professeur By Email-----------------------------------------------------------------------------------------
@@ -245,9 +302,10 @@ exports.addMatiereToProfesseus = catchAsync(async (req, res, next) => {
       new AppError("Aucun enseignant trouvé avec cet identifiant !", 404)
     );
   }
-  let ms = `La matière est ajouté au liste de ${prof.nom} ${prof.prenom} avec succés .`;
+
+  let ms = `La matière est ajouté au liste d'enseigant(e) avec succés .`;
   if (professeur.modifiedCount == 0) {
-    ms = `La matière existe déja dans la liste de ${prof.nom} ${prof.prenom}  .`;
+    ms = `La matière existe déja dans la liste d'enseigant(e) .`;
   }
   res.status(200).json({
     status: "succés",
@@ -308,7 +366,7 @@ exports.addCoursToProf = catchAsync(async (req, res, next) => {
   });
   res.status(201).json({
     status: "succés",
-    message: `Le cour est ajouté au liste de ${prof.nom} ${prof.prenom} avec succés .`,
+    message: `Le cour est ajouté au liste d'enseigant(e) avec succés .`,
     cours,
   });
 });

@@ -30,13 +30,19 @@ const createCoursFromGroupEmplois = async () => {
     dayNumero: day,
   });
 
-  const list_cours_day = await Cours.find({
+  /* const list_cours_day = await Cours.find({
     $where: async function () {
       let day_cours = await day;
       return this.date.getDay() === day_cours;
     },
-  });
+  }); */
 
+  const list_cours_day = await Cours.find({
+    date: {
+      $gte: date,
+      $lt: new Date(date.getTime() + 24 * 60 * 60 * 1000),
+    },
+  });
   if (emplois.length == 0) {
     result.message =
       "Aucun cours creaté aujourd'hui appartir d'emploi du temps ." +
@@ -49,11 +55,7 @@ const createCoursFromGroupEmplois = async () => {
       result.message = `succés de création de ${emplois.length} cours appartir d'emploi du temps aujourd'hui .`;
     } else {
       for (x of emplois) {
-        const cours_list = await Cours.find({
-          professeur: x.professeur,
-          date: date,
-        });
-        const result = VERIFICATION(x, list_cours_day);
+        const result = VERIFICATION(x, list_cours_day, "enseignant");
 
         if (result[0] == "failed") {
           list_cannot_added.push(x);
@@ -66,7 +68,7 @@ const createCoursFromGroupEmplois = async () => {
     if (list_will_added.length != 0) {
       for (x of list_will_added) {
         const cours = await Cours.create({
-          types: x.types,
+          type: x.type,
           date: date,
           startTime: x.startTime,
           professeur: x.professeur,

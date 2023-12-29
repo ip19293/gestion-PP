@@ -45,6 +45,13 @@ router
     professeurController.getProfCoursNon
   );
 router
+  .route("/:id/cours-oui")
+  .get(
+    authController.protect,
+    authController.restricTo("admin", "professeur"),
+    professeurController.getProfCoursSigned
+  );
+router
   .route("/:id/cours")
   .get(
     authController.protect,

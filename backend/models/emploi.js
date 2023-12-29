@@ -80,7 +80,7 @@ emploiSchema.pre("save", async function (next) {
 });
 
 /* ---------------------------------------------------------------------get day name methods---------------------- */
-emploiSchema.methods.getDayName = async function (index) {
+emploiSchema.methods.getDayName = async function () {
   let daysOfWeek = [
     "Dimanche",
     "Lundi",
@@ -91,11 +91,11 @@ emploiSchema.methods.getDayName = async function (index) {
     "Samedi",
   ];
 
-  return daysOfWeek[index];
+  return daysOfWeek[this.dayNumero];
 };
 emploiSchema.methods.getProfesseurMatiere = async function () {
   const prof = await Professeur.findById(this.professeur);
-  let prof_info = await prof.getInfo_Nbh_TH_Nbc_Somme();
+  let prof_info = await prof.getInformation();
   const matiere = await Matiere.findById(this.matiere);
 
   let res = [prof_info[1], prof_info[2], matiere.name];

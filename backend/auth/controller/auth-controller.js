@@ -36,6 +36,20 @@ const createSendToken = (user, statusCode, res, message) => {
     },
   });
 };
+exports.getProfesseur = catchAsync(async (req, res, next) => {
+  let message = "";
+  let id = req.params.id;
+  const user = await User.findById(id);
+  if (!user) {
+    return next(new AppError("Pas d'utilisateur trouvé !", 400));
+  }
+  const prof = await user.getProfesseur();
+  if (!prof) {
+    return next(new AppError("Pas de Enseignat trouvé ! ", 400));
+  }
+  message = "L'enseignat responsable de cet utilisateur donnée .";
+  createSendToken(prof, 201, res, message);
+});
 exports.singup = catchAsync(async (req, res, next) => {
   let message = "";
   let newUser;

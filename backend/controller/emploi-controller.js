@@ -70,13 +70,22 @@ exports.addEmploi = catchAsync(async (req, res, next) => {
     dayNumero: req.body.dayNumero,
     group: req.body.group,
   });
-  const result = VERIFICATION(req.body, emplois_day, "groupe");
 
-  if (result[0] == "failed") {
-    console.log(result[0]);
-    return next(new AppError(`${result[1]}`, 404));
+  const result_group = VERIFICATION(req.body, emplois_day, "groupe");
+
+  if (result_group[0] == "failed") {
+    console.log(result_group[0]);
+    return next(new AppError(`${result_group[1]}`, 404));
   }
-
+  const cours_list = await Emploi.find({
+    professeur: req.body.professeur,
+    dayNumero: req.body.dayNumero,
+  });
+  const result_prof = VERIFICATION(req.body, cours_list, "enseigant");
+  if (result_prof[0] == "failed") {
+    console.log(result_prof[0]);
+    return next(new AppError(`${result_prof[1]}`, 404));
+  }
   /* ------------------------------------------------------ */
   let emploi = new Emploi({
     type: req.body.type,
@@ -170,4 +179,93 @@ exports.deleteEmploi = catchAsync(async (req, res, next) => {
     message: "L'emploi supprimé avec succés .",
   });
 });
-/* ====================================================================VERIFICATION EMPLOI BEFORE ADDET OR EDIT=====================*/
+/* ====================================================================GET PROFESSEUR EMPLOI====================*/
+exports.getEmploisByProfesseurId = catchAsync(async (req, res, next) => {
+  const id = req.params.id;
+  const professeur = await Professeur.findById(id);
+
+  if (!professeur) {
+    return next(new AppError("Aucun enseignant trouvé !", 404));
+  }
+
+  const emplois_list = await Emploi.aggregate([
+    {
+      $match: {
+        professeur: new mongoose.Types.ObjectId(id),
+      },
+    },
+    {
+      $addFields: {
+        hour: {
+          $toInt: {
+            $arrayElemAt: [{ $split: ["$startTime", ":"] }, 0],
+          },
+        },
+        minute: {
+          $toInt: {
+            $arrayElemAt: [{ $split: ["$startTime", ":"] }, 1],
+          },
+        },
+      },
+    },
+    {
+      $sort: {
+        dayNumero: 1,
+        hour: 1,
+        minute: 1,
+      },
+    },
+  ]);
+  let emplois = [];
+  for (x of emplois_list) {
+    let em = await Emploi.findById(x._id);
+    let group = await Group.findById(x.group);
+    if (!group) {
+      return next(
+        new AppError("Aucun groupe trouvé avec cet identifiant !", 404)
+      );
+    }
+    let dt = await em.getProfesseurMatiere();
+    let day = await em.getDayName();
+    let group_info = await group.getSNumero_FId_FName_FNiveau_NiveauAnnee();
+    let data = {
+      id: x._id,
+      group: x.group,
+      day: day,
+      startTime: x.startTime,
+      finishTime: x.finishTime,
+      dayNumero: x.dayNumero,
+      type: x.type,
+      nbh: x.nbh,
+      semestre: group_info[0],
+      filliere: group_info[2],
+      niveau: group_info[3],
+      anne: group_info[4],
+      matiere: dt[2],
+    };
+    emplois.push(data);
+  }
+  const groupedEmploi = emplois.reduce((acc, obj) => {
+    const key = obj.day;
+    if (!acc[key]) {
+      acc[key] = [];
+    }
+    acc[key].push(obj);
+
+    return acc;
+  }, {});
+  /*  let data = [];
+  if (groupedEmploi.Dimanche) data.push(groupedEmploi.Dimanche);
+  if (groupedEmploi.Lundi) data.push(groupedEmploi.Lundi);
+  if (groupedEmploi.Mardi) data.push(groupedEmploi.Mardi);
+  if (groupedEmploi.Mercredi) data.push(groupedEmploi.Mercredi);
+  if (groupedEmploi.Jeudi) data.push(groupedEmploi.Jeudi);
+  if (groupedEmploi.Vendredi) data.push(groupedEmploi.Vendredi);
+  if (groupedEmploi.Samedi) data.push(groupedEmploi.Samedi); */
+  res.status(200).json({
+    status: "succés",
+
+    groupedEmploi,
+    emplois,
+  });
+});
