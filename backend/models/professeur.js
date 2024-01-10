@@ -102,7 +102,7 @@ professeurSchema.methods.getInfo_Nbh_TH_Nbc_Somme = async function (
           isPaid: "pas encore",
         }
       : { professeur: this._id, isSigned: "oui", isPaid: "pas encore" };
-  const prof_cours = await Cours.find(query);
+  const prof_cours = await Cours.find(query).sort({ date: 1 });
   let nbh = 0;
   let th = 0;
   let nbc = 0;

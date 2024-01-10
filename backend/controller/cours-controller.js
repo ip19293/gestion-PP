@@ -389,6 +389,7 @@ exports.getCoursByProfesseursId = catchAsync(async (req, res, next) => {
     let prix = matiere_info[1];
     for (y of x.data) {
       let cour = await Cours.findById(y._id);
+      let matiere = await Matiere.findById(y.matiere);
       let cour_info = await cour.getTHSomme();
       nbh = nbh + cour.nbh;
       th = th + cour_info[0];
@@ -418,9 +419,18 @@ exports.getCoursByProfesseursId = catchAsync(async (req, res, next) => {
       nbh: nbh,
       th: th,
       somme: somme,
+      matiere: matiere.name,
     };
     facture.push(data);
   }
+  let dt = {
+    matiere: "TOTAL",
+    nbh: prof_info[7],
+    th: prof_info[8],
+    nbc: prof_info[9],
+    somme: prof_info[10],
+  };
+  facture.push(dt);
   res.status(200).json({
     status: "succès",
     facture,

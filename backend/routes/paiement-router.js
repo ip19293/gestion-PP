@@ -32,5 +32,14 @@ paiementRouter
     authController.restricTo("admin", "professeur"),
     paiementController.updatePaiement
   );
-
+paiementRouter
+  .route("/:id/confirmation")
+  .post(
+    authController.protect,
+    authController.restricTo("professeur"),
+    paiementController.Validation
+  );
+paiementRouter
+  .route("/:id/professeur")
+  .post(authController.protect, paiementController.getPaiementsByProfesseurId);
 module.exports = paiementRouter;

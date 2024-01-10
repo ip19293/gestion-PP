@@ -40,8 +40,8 @@ const paiementSchema = mongoose.Schema(
     status: {
       type: String,
       required: true,
-      default: "créer",
-      enum: ["créer", "validé", "terminé"],
+      default: "initialisé",
+      enum: ["initialisé", "validé", "terminé"],
     },
     confirmation: {
       type: String,
