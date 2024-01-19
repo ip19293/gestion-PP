@@ -34,7 +34,16 @@ exports.deleteAllUsers = catchAsync(async (req, res, next) => {
 exports.addUser = catchAsync(async (req, res, next) => {
   const data = req.body;
 
-  const user = await User.create(data);
+  const user = await User.create({
+    nom: req.body.nom,
+    prenom: req.body.prenom,
+    mobile: req.body.mobile,
+    password: req.body.password,
+    email: req.body.email,
+    passwordConfirm: req.body.passwordConfirm,
+    passwordChangedAt: req.body.passwordChangedAt,
+    role: req.body.role,
+  });
 
   res.status(200).json({
     status: "success",

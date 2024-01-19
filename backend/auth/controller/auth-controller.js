@@ -6,6 +6,7 @@ const jwt = require("jsonwebtoken");
 const AppError = require("../../utils/appError");
 const sendEmail = require("../../utils/email");
 const Professeur = require("../../models/professeur");
+const professeur = require("../../models/professeur");
 const signToken = (id) => {
   return jwt.sign({ id }, process.env.JWT_SECRET, {
     expiresIn: process.env.JWT_EXPIRES_IN,
@@ -13,6 +14,9 @@ const signToken = (id) => {
 };
 
 const createSendToken = (user, statusCode, res, message) => {
+  let data = {
+    user: user,
+  };
   const token = signToken(user._id);
   const cookieOptions = {
     exprires: new Date(
@@ -26,56 +30,45 @@ const createSendToken = (user, statusCode, res, message) => {
 
   // Remove password from output
   user.password = undefined;
-
+  if (user.role === "professeur") {
+    let professeur = user.getProfesseur();
+    data = {
+      user: user,
+      professeur: professeur,
+    };
+  }
   res.status(statusCode).json({
     status: "succéss",
     message: message,
     token,
-    data: {
-      user: user,
-    },
+    data: data,
   });
 };
-exports.getProfesseur = catchAsync(async (req, res, next) => {
-  let message = "";
-  let id = req.params.id;
-  const user = await User.findById(id);
-  if (!user) {
-    return next(new AppError("Pas d'utilisateur trouvé !", 400));
-  }
-  const prof = await user.getProfesseur();
-  if (!prof) {
-    return next(new AppError("Pas de Enseignat trouvé ! ", 400));
-  }
-  message = "L'enseignat responsable de cet utilisateur donnée .";
-  createSendToken(prof, 201, res, message);
-});
+/* =================================================================SIGNUP ================================================== */
 exports.singup = catchAsync(async (req, res, next) => {
   let message = "";
   let newUser;
-  let professeur;
-  let query =
-    req.body.role !== undefined && req.body.role !== "admin"
-      ? {
-          nom: req.body.nom,
-          prenom: req.body.prenom,
-          mobile: req.body.mobile,
-          password: req.body.password,
-          email: req.body.email,
-          passwordConfirm: req.body.passwordConfirm,
-          passwordChangedAt: req.body.passwordChangedAt,
-          role: req.body.role,
-        }
-      : {
-          nom: req.body.nom,
-          prenom: req.body.prenom,
-          mobile: req.body.mobile,
-          password: req.body.password,
-          email: req.body.email,
-          passwordConfirm: req.body.passwordConfirm,
-          passwordChangedAt: req.body.passwordChangedAt,
-        };
-  if (req.body.role == "professeur") {
+  const email = req.body.email;
+  const password = req.body.password;
+  // 1) check if email and password exist
+  if (!email || !password) {
+    return next(
+      new AppError(
+        "Veuillez fournir votre adresse e-mail et votre mot de passe!",
+        400
+      )
+    );
+  }
+
+  // 2) check if user exists && password is correct
+  const user = await User.findOne({ email })
+    .select("+password")
+    .select("+active");
+  if (!user || !(await user.correctPassword(password, user.password))) {
+    return next(new AppError("E-mail ou mot de passe incorrect !", 401));
+  }
+
+  if (user.role === "professeur") {
     const prof = await Professeur.findOne({
       accountNumero: req.body.accountNumero,
     });
@@ -92,19 +85,17 @@ exports.singup = catchAsync(async (req, res, next) => {
         )
       );
     }
-  }
-  newUser = await User.create(query);
-  if (req.body.role == "professeur") {
-    professeur = await Professeur.create({
-      user: newUser._id,
+    const professeur = await Professeur.create({
+      user: user._id,
       accountNumero: req.body.accountNumero,
       banque: req.body.banque,
     });
   }
-  message = "Votre comple est crée avec succéss .";
-  createSendToken(newUser, 201, res, message);
-});
 
+  message = "Votre comple est crée avec succéss .";
+  createSendToken(user, 201, res, message);
+});
+/* ====================================================================LOGIN ============================== */
 exports.login = catchAsync(async (req, res, next) => {
   let message = "";
   const email = req.body.email;
