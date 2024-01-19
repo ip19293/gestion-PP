@@ -13,7 +13,7 @@ const signToken = (id) => {
   });
 };
 
-const createSendToken = (user, statusCode, res, message) => {
+const createSendToken = async (user, statusCode, res, message) => {
   let data = {
     user: user,
   };
@@ -31,7 +31,7 @@ const createSendToken = (user, statusCode, res, message) => {
   // Remove password from output
   user.password = undefined;
   if (user.role === "professeur") {
-    let professeur = user.getProfesseur();
+    let professeur = await user.getProfesseur();
     data = {
       user: user,
       professeur: professeur,
