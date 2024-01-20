@@ -9,24 +9,6 @@ const professeurSchema = mongoose.Schema(
         ref: "Matiere",
       },
     ],
-    banque: {
-      type: String,
-      required: true,
-      default: "BMCI",
-    },
-
-    accountNumero: {
-      type: Number,
-      unique: true,
-      required: true,
-      validate: {
-        validator: function (value) {
-          return value.toString().length === 10;
-        },
-        message: "Le numéro de compte doit avoir une longueur de 10 chiffres !",
-      },
-    },
-
     user: {
       type: mongoose.Schema.ObjectId,
       ref: "User",
@@ -81,8 +63,8 @@ professeurSchema.methods.getInformation = async function () {
     user.prenom,
     user.email,
     user.mobile,
-    this.banque,
-    this.accountNumero,
+    user.banque,
+    user.accountNumero,
   ];
 };
 professeurSchema.methods.getInfo_Nbh_TH_Nbc_Somme = async function (
@@ -125,8 +107,8 @@ professeurSchema.methods.getInfo_Nbh_TH_Nbc_Somme = async function (
     user.prenom,
     user.email,
     user.mobile,
-    this.banque,
-    this.accountNumero,
+    user.banque,
+    user.accountNumero,
     nbh,
     th,
     nbc,

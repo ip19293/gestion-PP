@@ -3,6 +3,7 @@ const User = require("../models/user");
 const catchAsync = require("../../utils/catchAsync");
 const AppError = require("../../utils/appError");
 const Professeur = require("../../models/professeur");
+
 const filterOb = (obj, ...allowedFields) => {
   const newObj = {};
   Object.keys(obj).forEach((el) => {
@@ -17,39 +18,60 @@ exports.getUsers = catchAsync(async (req, res, next) => {
   const users = await features.query;
 
   res.status(200).json({
-    status: "success",
+    status: "succés",
 
     users,
   });
 });
+/* ==================================================upload user data ======================================== */
+exports.uploadUser = catchAsync(async (req, res, next) => {
+  res.status(200).json({
+    status: "succés",
+    message: "Le fichier est téléchargé avec succés",
+  });
+});
+
 // 2) delete All User
 exports.deleteAllUsers = catchAsync(async (req, res, next) => {
   await User.deleteMany();
   res.status(200).json({
-    status: "success",
-    message: "all users is deleted",
+    status: "succés",
+    message: "Tous les utilisateurs sont supprimés avec succés",
   });
 });
 // 3) Create new User
 exports.addUser = catchAsync(async (req, res, next) => {
   const data = req.body;
-
+  let professeur = {};
   const user = await User.create({
     nom: req.body.nom,
     prenom: req.body.prenom,
     mobile: req.body.mobile,
+    photo: req.body.photo,
     password: req.body.password,
     email: req.body.email,
     passwordConfirm: req.body.passwordConfirm,
     passwordChangedAt: req.body.passwordChangedAt,
     role: req.body.role,
+    accountNumero: req.body.accountNumero,
+    banque: req.body.banque,
   });
-
+  if (req.body.role === "professeur") {
+    professeur = await Professeur.create({
+      user: user._id,
+    });
+  }
   res.status(200).json({
-    status: "success",
-    data: {
-      user: user,
-    },
+    status: "succés",
+    data:
+      req.body.role === "professeur"
+        ? {
+            user: user,
+            professeur: professeur,
+          }
+        : {
+            user: user,
+          },
   });
 });
 // active or deactive user
@@ -68,7 +90,7 @@ exports.activeOrDisactiveUser = catchAsync(async (req, res, next) => {
           runValidators: true,
         }
       );
-      ms = "user is deactivate";
+      ms = "L'utilisateur est déactivate";
     } else {
       await User.findByIdAndUpdate(
         id,
@@ -78,11 +100,11 @@ exports.activeOrDisactiveUser = catchAsync(async (req, res, next) => {
           runValidators: true,
         }
       );
-      ms = "user is activate ";
+      ms = "L'utilisateur est activate ";
     }
   }
   res.status(201).json({
-    status: "success",
+    status: "succés",
     message: ms,
   });
 });
@@ -96,35 +118,28 @@ exports.updateUser = catchAsync(async (req, res, next) => {
   });
 
   if (!user) {
-    return next(new AppError("No user found with that ID", 404));
+    return next(new AppError("Aucun utilisateur trouvé avec cet ID", 404));
   }
-  if (req.body.role == "professeur") {
-    let professeur = await Professeur.findOne({ user: user._id });
-    if (professeur) {
-      professeur = await Professeur.findByIdAndUpdate(professeur._id, data, {
-        new: true,
-        runValidators: true,
-      });
-    } else {
-      professeur = new Professeur(data);
-      professeur = await professeur.save();
-    }
-  }
+
   res.status(201).json({
-    status: "success",
+    status: "succés",
     user: user,
   });
 });
 // 5) Remove a User
 exports.deleteUser = catchAsync(async (req, res, next) => {
   const id = req.params.id;
-  const user = await User.findByIdAndDelete(id);
+  const user = await User.findOneAndDelete({ _id: id });
   if (!user) {
-    return next(new AppError("No user found with that ID", 404));
+    return next(new AppError("Aucun utilisateur trouvé avec cet ID", 404));
   }
-  res.status(204).json({
-    status: "success",
-    message: "user ssucceffily delete",
+  const professeur = await Professeur.findOneAndDelete({ user: user._id });
+
+  res.status(200).json({
+    status: "succés",
+    message: ` L'utilisateur ${
+      professeur ? `et l'enseignant(e) sont  supprimés` : "est  supprimé"
+    } avec succés !`,
   });
 });
 // 6) get User By ID
@@ -132,10 +147,10 @@ exports.getUserById = catchAsync(async (req, res, next) => {
   const id = req.params.id;
   const user = await User.findById(id);
   if (!user) {
-    return next(new AppError("No user found with that ID", 404));
+    return next(new AppError("Aucun utilisateur trouvé avec cet ID", 404));
   }
   res.status(200).json({
-    status: "success",
+    status: "succés",
     user: user,
   });
 });
@@ -159,7 +174,7 @@ exports.updateMe = catchAsync(async (req, res, next) => {
   });
 
   res.status(200).json({
-    status: "success",
+    status: "succés",
     data: {
       user: user,
     },
@@ -169,7 +184,7 @@ exports.updateMe = catchAsync(async (req, res, next) => {
 exports.deleteMe = catchAsync(async (req, res, next) => {
   await User.findByIdAndUpdate(req.user.id, { active: false });
   res.status(204).json({
-    status: "success",
+    status: "succés",
     data: null,
   });
 });
@@ -186,7 +201,7 @@ exports.getProfesseur = catchAsync(async (req, res, next) => {
   }
   message = "L'enseignat responsable de cet utilisateur donnée .";
   res.status(200).json({
-    status: "success",
+    status: "succés",
     message: message,
     prof,
   });

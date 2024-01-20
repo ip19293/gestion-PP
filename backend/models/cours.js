@@ -66,7 +66,10 @@ coursSchema.pre("validate", async function (next) {
         new AppError("Un cours ne peut pas durer plus de trois heures !", 404)
       );
     }
-    if (this.isSigned == "oui" && ["oui", "préparée"].includes(this.isPaid)) {
+    if (
+      this.isSigned == "pas encore" &&
+      ["oui", "préparée"].includes(this.isPaid)
+    ) {
       return next(
         new AppError(
           "Un cours non signé ne peut pas étre paiée ou préparée !",

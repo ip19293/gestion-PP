@@ -50,7 +50,23 @@ const userSchema = mongoose.Schema({
       message: "Les mots de passe ne sont pas les mèmes !!!",
     },
   },
+  banque: {
+    type: String,
+    required: true,
+    default: "BMCI",
+  },
 
+  accountNumero: {
+    type: Number,
+    unique: true,
+    required: true,
+    validate: {
+      validator: function (value) {
+        return value.toString().length === 10;
+      },
+      message: "Le numéro de compte doit avoir une longueur de 10 chiffres !",
+    },
+  },
   passwordChangedAt: Date,
   passwordResetToken: String,
   passwordResetExpires: Date,
