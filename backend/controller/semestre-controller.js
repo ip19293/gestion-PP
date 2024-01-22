@@ -2,6 +2,7 @@ const APIFeatures = require("../utils/apiFeatures");
 const Filliere = require("../models/filliere");
 const Semestre = require("../models/semestre");
 const Matiere = require("../models/matiere");
+const Element = require("../models/element");
 const catchAsync = require("../utils/catchAsync");
 const AppError = require("../utils/appError");
 
@@ -77,7 +78,7 @@ exports.updateSemestre = catchAsync(async (req, res, next) => {
       new AppError(`La filière avec cet identifiant introuvable !`, 404)
     );
   }
-  const s = await Semestre.find({
+  const s = await Semestre.findOne({
     filliere: req.body.filliere,
     numero: req.body.numero,
   });
@@ -146,7 +147,15 @@ exports.addOneElementToSemestre = catchAsync(async (req, res, next) => {
     },
     {
       $addToSet: {
-        elements: idM,
+        elements: {
+          matiere: idM,
+          professeurCM: req.body.professeurCM,
+          professeurTP: req.body.professeurTP,
+          professeurTD: req.body.professeurTD,
+          creditCM: req.body.creditCM,
+          creditTP: req.body.creditTP,
+          creditTD: req.body.creditTD,
+        },
       },
     },
     { new: true }
@@ -227,15 +236,28 @@ exports.getSemestreElements = catchAsync(async (req, res, next) => {
       new AppError("La filière avec cet identifiant introuvable !", 404)
     );
   }
+  const elements_list = await Element.find({ semestre: semestre._id });
   let elements = [];
   const filliere_info = await filliere.getPeriodePlace();
-  for (s of semestre.elements) {
-    let matiere = await Matiere.findById(s);
+  for (elem of elements_list) {
+    let matiere = await Matiere.findById(elem.matiere);
     let matiere_info = await matiere.getCodePrixCNameCCode();
+    let element_profs = await elem.getProfCM_ProfTP_ProfTD();
     let code =
-      matiere_info[3] + (await s.numero) + filliere_info[1] + matiere.numero;
+      matiere_info[3] +
+      (await semestre.numero) +
+      filliere_info[1] +
+      matiere.numero;
     let data = {
-      id: s,
+      _id: elem._id,
+      semestre_id: elem.semestre,
+      matiere_id: elem.matiere,
+      creditCM: elem.creditCM,
+      creditTP: elem.creditTP,
+      creditTD: elem.creditTD,
+      professeurCM: element_profs[0],
+      professeurTP: element_profs[1],
+      professeurTD: element_profs[2],
       name_EM: matiere.name,
       code_EM: code,
     };

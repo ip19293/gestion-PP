@@ -15,7 +15,7 @@ router.param("id", (req, res, next, val) => {
 });
 router
   .route("/:id")
-  .get(filliereController.getFilliereDetail)
+  .get(filliereController.getSemestresByFiliereId)
   .delete(
     authController.protect,
     authController.restricTo("admin", "responsable"),

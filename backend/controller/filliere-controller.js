@@ -1,13 +1,12 @@
 const APIFeatures = require("../utils/apiFeatures");
 const Filliere = require("../models/filliere");
-const Professeur = require("../models/professeur");
+const Element = require("../models/element");
 const catchAsync = require("../utils/catchAsync");
 const AppError = require("../utils/appError");
 
 const Semestre = require("../models/semestre");
 const Matiere = require("../models/matiere");
 const FilliereDetail = require("./json-response/filliere/filliere-semestre-elements");
-const FilliereEmploi = require("./json-response/filliere/filliere-emploi");
 
 exports.getFillieres = catchAsync(async (req, res, next) => {
   let filter = {};
@@ -119,6 +118,25 @@ exports.getFilliere = catchAsync(async (req, res, next) => {
     filliere,
   });
 });
+/* ====================================================== GET SEMESTRES BY FILIERE ID =====================*/
+exports.getSemestresByFiliereId = catchAsync(async (req, res, next) => {
+  const id = req.params.id;
+  const filliere = await Filliere.findById(id);
+  if (!filliere) {
+    return next(
+      new AppError("La filière avec cet identifiant introuvable !", 404)
+    );
+  }
+  const semestres = await Semestre.find({ filliere: id });
+  res.status(200).json({
+    status: "succès",
+    _id: filliere._id,
+    filliere: filliere.name,
+    description: filliere.description,
+    niveau: filliere.niveau,
+    semestres: semestres,
+  });
+});
 /* ====================================================GET DETAIL LIST OF SEMESTRES========================== */
 exports.getFilliereDetail = catchAsync(async (req, res, next) => {
   const id = req.params.id;
@@ -136,6 +154,7 @@ exports.getFilliereDetail = catchAsync(async (req, res, next) => {
       list_semestres.push(s.numero);
     }
   }
+
   const data = await getFilliereSemestresElements(semestres, filliere);
   res.status(200).json({
     status: "succès",

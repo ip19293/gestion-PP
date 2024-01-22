@@ -12,6 +12,7 @@ const SemestreRouter = require("./routes/semestre-router");
 const groupRouter = require("./routes/group-router");
 const emploiRouter = require("./routes/emploi-router");
 const paiementRouter = require("./routes/paiement-router");
+const elementRouter = require("./routes/element-router");
 const AuthRouter = require("../backend/auth/routes/auth-routes");
 const rateLimit = require("express-rate-limit");
 const helmet = require("helmet");
@@ -86,6 +87,7 @@ app.use("/semestre", SemestreRouter);
 app.use("/group", groupRouter);
 app.use("/emploi", emploiRouter);
 app.use("/paiement", paiementRouter);
+app.use("/element", elementRouter);
 
 app.all("*", (req, res, next) => {
   next(new AppError(`cant not found ${req.originalUrl} on this server`, 404));

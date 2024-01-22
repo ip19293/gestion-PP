@@ -10,6 +10,7 @@ const semestreSchema = mongoose.Schema(
       select: true,
     },
     numero: {
+      required: [true, "Numéro de semestre est requis !"],
       type: Number,
       select: true,
       enum: [1, 2, 3, 4, 5, 6],
@@ -43,12 +44,6 @@ const semestreSchema = mongoose.Schema(
         return f;
       },
     },
-    elements: [
-      {
-        type: mongoose.Schema.ObjectId,
-        ref: "Matiere",
-      },
-    ],
   },
   {
     toJSON: { virtuals: true },
@@ -56,7 +51,7 @@ const semestreSchema = mongoose.Schema(
   }
 );
 
-semestreSchema.pre("save", async function (next) {
+/* semestreSchema.pre("save", async function (next) {
   const unqRef = [...new Set(this.elements.map(String))];
   if (this.elements.length !== unqRef.length) {
     const error = new Error("Réference d'objet en double dans l'élément !");
@@ -65,7 +60,7 @@ semestreSchema.pre("save", async function (next) {
   try {
     const existe_matiere = await Promise.all(
       this.elements.map(async (el) => {
-        const refDoc = await Matiere.findById(el);
+        const refDoc = await Matiere.findById(el.matiere);
         if (!refDoc) {
           throw new Error(
             `Réference  document introuvable pour identifiant: ${el} !`
@@ -77,33 +72,28 @@ semestreSchema.pre("save", async function (next) {
     next();
   } catch (error) {
     next(error);
-  }
-  /* --------------------------------------------------------REMOVE SEMESTRES IN FINDONEANDDELETED FILLIERE */
-  semestreSchema.post("findOneAndDelete", async function (semestre, message) {
-    console.log(" semestre remove midleweere work ....................");
-    const Group = require("./group");
-    const Emploi = require("./emploi");
-    const Filliere = require("./filliere");
-    const groups = await Group.find({ semestre: semestre._id });
-    const filliere = await Filliere.findById(this.filliere);
-    let emplois = [];
-    for (elem of groups) {
-      let emploi = await Emploi.deleteMany({ group: elem._id });
-      if (emploi) {
-        emplois.push(emploi);
-      }
+  } */
+/* --------------------------------------------------------REMOVE SEMESTRES IN FINDONEANDDELETED FILLIERE */
+semestreSchema.post("findOneAndDelete", async function (semestre) {
+  console.log(" semestre remove midleweere work ....................");
+  const Group = require("./group");
+  const Emploi = require("./emploi");
+  const Filliere = require("./filliere");
+  const groups = await Group.find({ semestre: semestre._id });
+  const filliere = await Filliere.findById(semestre.filliere);
+  let emplois = [];
+  for (elem of groups) {
+    let emploi = await Emploi.deleteMany({ group: elem._id });
+    if (emploi) {
+      emplois.push(emploi);
     }
-    await Group.deleteMany({ semestre: semestre._id });
-    console.log(
-      `Le semestre  ${semestre.numero} de ${filliere.niveau}  ${filliere.name} avec  ${groups} et  ${emplois.length} cours d'emploi du temps  est supprimé !`
-    );
-  });
+  }
+  await Group.deleteMany({ semestre: semestre._id });
+  console.log(
+    `Le semestre  ${semestre.numero} de ${filliere.niveau}  ${filliere.name} avec  ${groups} et  ${emplois.length} cours d'emploi du temps  est supprimé !`
+  );
 });
-semestreSchema.post("save", async function (semestre) {
-  /*  semestre.numero = 2;
-  await semestre.save(); */
-  console.log(`${semestre}`);
-});
+
 /* ------------------------------------------------------------------------------------------ */
 semestreSchema.methods.getNiveauAnnee = async function () {
   const Filliere = require("./filliere");
