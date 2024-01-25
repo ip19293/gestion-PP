@@ -92,10 +92,23 @@ exports.addElement = catchAsync(async (req, res, next) => {
 /* ======================================================================EDIT ========================= */
 exports.updateElement = catchAsync(async (req, res, next) => {
   const id = req.params.id;
-  const categorie = await Categorie.findById(req.body.categorie);
-  if (!categorie) {
+  const element = await Element.findById(id);
+  if (!element) {
     return next(
-      new AppError("Aucune catégorie trouvée avec cet identifiant !", 404)
+      new AppError("Aucune element trouvée avec cet identifiant !", 404)
+    );
+  }
+  const matiere = await Matiere.findById(req.body.matiere);
+
+  if (!matiere) {
+    return next(
+      new AppError("Aucune matiére trouvée avec cet identifiant !", 404)
+    );
+  }
+  const semestre = await Semestre.findById(req.body.semestre);
+  if (!semestre) {
+    return next(
+      new AppError("Aucune semestre trouvée avec cet identifiant !", 404)
     );
   }
   const OldElement = await Element.findOne({
@@ -106,17 +119,14 @@ exports.updateElement = catchAsync(async (req, res, next) => {
     return next(new AppError("L'element existe déja !", 404));
   }
 
-  const element = await Element.findById(id);
-  if (!element) {
-    return next(
-      new AppError("Aucune element trouvée avec cet identifiant !", 404)
-    );
-  }
   element.semestre = req.body.semestre;
   element.matiere = req.body.matiere;
-  element.professeurCM = req.body.professeurCM;
-  element.professeurTD = req.body.professeurTD;
-  element.professeurTP = req.body.professeurTP;
+  element.professeurCM =
+    req.body.professeurCM != "" ? req.body.professeurCM : undefined;
+  element.professeurTD =
+    req.body.professeurTD != "" ? req.body.professeurTD : undefined;
+  element.professeurTP =
+    req.body.professeurTP != "" ? req.body.professeurTP : undefined;
   element.creditCM = req.body.creditCM;
   element.creditTD = req.body.creditTD;
   element.creditTP = req.body.creditTP;

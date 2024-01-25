@@ -78,8 +78,9 @@ coursSchema.pre("validate", async function (next) {
       );
     }
   } catch (error) {
-    next(error);
+    //next(error);
   }
+  next();
 });
 coursSchema.pre("save", async function (next) {
   const input = this.startTime.split(":");

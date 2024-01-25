@@ -46,14 +46,15 @@ professeurSchema.pre("save", async function (next) {
     next(error);
   }
 });
-professeurSchema.post("findOneAndDelete", async function (professeur) {
+professeurSchema.post("findOneAndDelete", async function (professeur, user) {
   console.log(" professeur remove midleweere work ....................");
   const Cours = require("./cours");
   const Emploi = require("./emploi");
-  let message = `L'eneignant : ${professeur.nomComplet} est suupprimé  et ces [ cours, emploi] avec succés .`;
+
+  let message = `L'eneignant(e) : ${user.nom}  ${user.prenom} est suupprimé  et ces [ cours, emploi] avec succés .`;
   await Cours.deleteMany({ professeur: professeur._id });
   await Emploi.deleteMany({ professeur: professeur._id });
-  professeur.nomComplet = message;
+  professeur._id = message;
 });
 professeurSchema.methods.getInformation = async function () {
   const user = await User.findById(this.user);

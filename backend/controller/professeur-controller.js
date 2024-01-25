@@ -97,15 +97,11 @@ exports.deleteProfesseur = catchAsync(async (req, res, next) => {
       new AppError("Aucun enseignant trouvé avec cet identifiant !", 404)
     );
   }
-  const user = await User.findByIdAndDelete(professeur.user);
-  let ms = "";
-  if (user) {
-    ms = "User and ";
-  }
+  const user = await User.findByIdAndDelete({ _id: professeur.user });
 
   res.status(200).json({
     status: "succés",
-    message: ms + professeur.nom,
+    message: professeur._id,
   });
 });
 exports.getProfCours = catchAsync(async (req, res, next) => {

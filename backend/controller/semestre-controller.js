@@ -53,7 +53,7 @@ exports.addSemestre = catchAsync(async (req, res, next) => {
     numero: req.body.numero,
     start: req.body.start,
     filliere: req.body.filliere,
-    elements: req.body.elements,
+    finish: req.body.finish,
   });
   semestre = await semestre.save();
   res.status(200).json({
@@ -92,8 +92,8 @@ exports.updateSemestre = catchAsync(async (req, res, next) => {
   }
   semestre.filliere = req.body.filliere;
   semestre.numero = req.body.numero;
-  semestre.elements = req.body.elements;
   semestre.start = req.body.start;
+  semestre.finish = req.body.finish;
   await semestre.save();
   res.status(201).json({
     status: "succès",
@@ -255,9 +255,14 @@ exports.getSemestreElements = catchAsync(async (req, res, next) => {
       creditCM: elem.creditCM,
       creditTP: elem.creditTP,
       creditTD: elem.creditTD,
+      professeurCM_id: elem.professeurCM,
+      professeurTP_id: elem.professeurTP,
+      professeurTD_id: elem.professeurTD,
       professeurCM: element_profs[0],
       professeurTP: element_profs[1],
       professeurTD: element_profs[2],
+      categorie: matiere_info[2],
+      categorie_id: matiere.categorie,
       name_EM: matiere.name,
       code_EM: code,
     };
@@ -265,6 +270,12 @@ exports.getSemestreElements = catchAsync(async (req, res, next) => {
   }
   res.status(200).json({
     status: "succès",
+    _id: filliere._id,
+    filliere: filliere.name,
+    niveau: filliere.niveau,
+    description: filliere.description,
+    semestre: semestre.numero,
+    semestre_id: semestre._id,
     elements,
   });
 });

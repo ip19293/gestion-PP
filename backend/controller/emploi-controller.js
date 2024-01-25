@@ -2,7 +2,7 @@ const APIFeatures = require("../utils/apiFeatures");
 const Emploi = require("../models/emploi");
 const Cours = require("../models/cours");
 const Professeur = require("../models/professeur");
-const Matiere = require("../models/matiere");
+const Element = require("../models/element");
 const Group = require("../models/group");
 const mongoose = require("mongoose");
 const catchAsync = require("../utils/catchAsync");
@@ -40,32 +40,20 @@ exports.getEmploiById = catchAsync(async (req, res, next) => {
 
 /* ==============================================================ADD EMPLOI============================== */
 exports.addEmploi = catchAsync(async (req, res, next) => {
-  const professeur = await Professeur.findById(req.body.professeur);
-  const matiere = await Matiere.findById(req.body.matiere);
+  const element = await Element.findById(req.body.element);
   const group = await Group.findById(req.body.group);
-  if (!professeur) {
-    return next(
-      new AppError("Aucun enseignant trouvé avec cet identifiant !", 404)
-    );
-  }
+
   if (!group) {
     return next(
       new AppError("Aucun groupe trouvé avec cet identifiant !", 404)
     );
   }
-  if (!matiere) {
+  if (!element) {
     return next(
-      new AppError("Aucun matiére trouvé avec cet identifiant !", 404)
+      new AppError("Aucun élément trouvé avec cet identifiant !", 404)
     );
   }
-  if (!professeur.matieres.includes(matiere._id)) {
-    return next(
-      new AppError(
-        "Aucun matiére dans la liste de ce enseignant trouvé avec cet identifiant !",
-        404
-      )
-    );
-  }
+
   const emplois_day = await Emploi.find({
     dayNumero: req.body.dayNumero,
     group: req.body.group,
@@ -78,7 +66,7 @@ exports.addEmploi = catchAsync(async (req, res, next) => {
     return next(new AppError(`${result_group[1]}`, 404));
   }
   const cours_list = await Emploi.find({
-    professeur: req.body.professeur,
+    element: req.body.element,
     dayNumero: req.body.dayNumero,
   });
   const result_prof = VERIFICATION(req.body, cours_list, "enseigant");
@@ -91,8 +79,7 @@ exports.addEmploi = catchAsync(async (req, res, next) => {
     type: req.body.type,
     nbh: req.body.nbh,
     startTime: req.body.startTime,
-    professeur: req.body.professeur,
-    matiere: req.body.matiere,
+    element: req.body.element,
     dayNumero: req.body.dayNumero,
     group: req.body.group,
   });
@@ -106,8 +93,7 @@ exports.addEmploi = catchAsync(async (req, res, next) => {
 /* ===================================================================UPDATE bY ID======================================== */
 exports.updateEmploi = async (req, res, next) => {
   const id = req.params.id;
-  const professeur = await Professeur.findById(req.body.professeur);
-  const matiere = await Matiere.findById(req.body.matiere);
+  const element = await Element.findById(req.body.element);
   const group = await Group.findById(req.body.group);
   const emploi = await Emploi.findById(id);
   if (!emploi) {
@@ -115,29 +101,17 @@ exports.updateEmploi = async (req, res, next) => {
       new AppError("Aucun emploi trouvé avec cet identifiant !", 404)
     );
   }
-  if (!professeur) {
-    return next(
-      new AppError("Aucun enseignant trouvé avec cet identifiant !", 404)
-    );
-  }
   if (!group) {
     return next(
       new AppError("Aucun groupe trouvé avec cet identifiant !", 404)
     );
   }
-  if (!matiere) {
+  if (!element) {
     return next(
-      new AppError("Aucun matiére trouvé avec cet identifiant !", 404)
+      new AppError("Aucun élément trouvé avec cet identifiant !", 404)
     );
   }
-  if (!professeur.matieres.includes(matiere._id)) {
-    return next(
-      new AppError(
-        "Aucun matiére dans la liste de ce enseignant trouvé avec cet identifiant !",
-        404
-      )
-    );
-  }
+
   const emplois_day = await Emploi.find({
     _id: { $ne: id },
     dayNumero: req.body.dayNumero,
@@ -149,12 +123,20 @@ exports.updateEmploi = async (req, res, next) => {
     console.log(result[0]);
     return next(new AppError(`${result[1]}`, 404));
   }
-
+  const cours_list = await Emploi.find({
+    _id: { $ne: id },
+    element: req.body.element,
+    dayNumero: req.body.dayNumero,
+  });
+  const result_prof = VERIFICATION(req.body, cours_list, "enseigant");
+  if (result_prof[0] == "failed") {
+    console.log(result_prof[0]);
+    return next(new AppError(`${result_prof[1]}`, 404));
+  }
   emploi.type = req.body.type;
   emploi.nbh = req.body.nbh;
   emploi.startTime = req.body.startTime;
-  emploi.professeur = req.body.professeur;
-  emploi.matiere = req.body.matiere;
+  emploi.element = req.body.element;
   emploi.dayNumero = req.body.dayNumero;
   emploi.group = req.body.group;
   await emploi.save();

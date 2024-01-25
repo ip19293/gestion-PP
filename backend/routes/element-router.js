@@ -13,7 +13,7 @@ elementRouter
 elementRouter
   .route("/:id")
   .delete(authController.protect, elementController.deleteElement)
-  .get(elementController.getElement)
+  .get(authController.protect, elementController.getElement)
   .patch(authController.protect, elementController.updateElement);
 
 module.exports = elementRouter;

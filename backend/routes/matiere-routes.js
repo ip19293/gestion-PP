@@ -1,15 +1,6 @@
 const express = require("express");
 const authController = require("../auth/controller/auth-controller");
-const {
-  getMatieres,
-  addMatiere,
-  deleteMatiere,
-  updateMatiere,
-  getMatiereStats,
-  deleteAllMatieres,
-  getMatiere,
-  getMatieresProf,
-} = require("../controller/matiere-controller");
+const matiereController = require("../controller/matiere-controller");
 
 const matiereRouter = express.Router();
 matiereRouter
@@ -17,24 +8,26 @@ matiereRouter
   .get(
     authController.protect,
     authController.restricTo("admin", "responsable"),
-    getMatieres
+    matiereController.getMatieres
   )
   .post(
     authController.protect,
     authController.restricTo("admin", "responsable"),
-    addMatiere
+    matiereController.addMatiere
   )
   .delete(
     authController.protect,
     authController.restricTo("admin", "responsable"),
-    deleteAllMatieres
+    matiereController.deleteAllMatieres
   );
 
 matiereRouter
   .route("/:id")
-  .delete(deleteMatiere)
-  .patch(updateMatiere)
-  .get(getMatiere);
+  .delete(matiereController.deleteMatiere)
+  .patch(matiereController.updateMatiere)
+  .get(matiereController.getMatiere);
 
-matiereRouter.route("/:id/professeur").get(getMatieresProf);
+matiereRouter
+  .route("/:id/professeurs")
+  .get(matiereController.getProfesseursByMatiereId);
 module.exports = matiereRouter;

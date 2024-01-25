@@ -1,6 +1,7 @@
 const mongoose = require("mongoose");
 const Professeur = require("./professeur");
 const Matiere = require("./matiere");
+const Element = require("./element");
 const AppError = require("../utils/appError");
 const emploiSchema = mongoose.Schema({
   type: {
@@ -35,15 +36,15 @@ const emploiSchema = mongoose.Schema({
     ref: "Group",
     required: [true, "le group est requis !"],
   },
-  professeur: {
+  /*  professeur: {
     type: mongoose.Schema.ObjectId,
     ref: "Professeur",
     required: [true, "enseignant est requis !"],
-  },
-  matiere: {
+  }, */
+  element: {
     type: mongoose.Schema.ObjectId,
-    ref: "Matiere",
-    required: [true, "matiére est requis !"],
+    ref: "Element",
+    required: [true, "élément est requis !"],
   },
 });
 /* ===================================================================== validate midelwere ======================== */
@@ -53,6 +54,20 @@ emploiSchema.pre("validate", async function (next) {
       return next(
         new AppError("Un cours ne peut pas durer plus de trois heures !", 404)
       );
+    }
+    const element = await Element.findById(this.element);
+    if (element) {
+      let type = element["professeur" + this.type];
+      console.log(type);
+      let professeur = await Professeur.findById(type);
+      if (!professeur) {
+        return next(
+          new AppError(
+            `Il n'y a pas de professeur  ${this.type} de cette élément  !`,
+            404
+          )
+        );
+      }
     }
   } catch (error) {
     next(error);
@@ -94,11 +109,19 @@ emploiSchema.methods.getDayName = async function () {
   return daysOfWeek[this.dayNumero];
 };
 emploiSchema.methods.getProfesseurMatiere = async function () {
-  const prof = await Professeur.findById(this.professeur);
-  let prof_info = await prof.getInformation();
-  const matiere = await Matiere.findById(this.matiere);
+  const element = await Element.findById(this.element);
+  let type = element["professeur" + this.type];
+  let professeur = await Professeur.findById(type);
+  let prof_info = await professeur.getInformation();
+  const matiere = await Matiere.findById(element.matiere);
 
-  let res = [prof_info[1], prof_info[2], matiere.name];
+  let res = [
+    prof_info[0],
+    prof_info[1],
+    prof_info[2],
+    matiere._id,
+    matiere.name,
+  ];
 
   return res;
 };
@@ -106,8 +129,7 @@ emploiSchema.methods.getProfesseurMatiere = async function () {
 emploiSchema.methods.getGName_SNum_SId_FId_FName_FNiveau_NiveauAnnee =
   async function () {
     const Group = require("./group");
-    const Semestre = require("./semestre");
-    const Filliere = require("./filliere");
+
     const group = await Group.findById(this.group);
     let group_info = await group.getSNumero_FId_FName_FNiveau_NiveauAnnee();
     let info = [];

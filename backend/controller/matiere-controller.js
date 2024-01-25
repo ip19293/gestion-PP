@@ -45,7 +45,7 @@ exports.deleteAllMatieres = catchAsync(async (req, res, next) => {
     message: "all matieres is deleted",
   });
 });
-exports.getMatieresProf = catchAsync(async (req, res, next) => {
+exports.getProfesseursByMatiereId = catchAsync(async (req, res, next) => {
   let filter = {};
   let professeurs = [];
   const professeurs_list = await Professeur.find({

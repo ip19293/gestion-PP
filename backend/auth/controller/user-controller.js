@@ -41,15 +41,14 @@ exports.deleteAllUsers = catchAsync(async (req, res, next) => {
 });
 // 3) Create new User
 exports.addUser = catchAsync(async (req, res, next) => {
-  const data = req.body;
   let professeur = {};
   const user = await User.create({
     nom: req.body.nom,
     prenom: req.body.prenom,
     mobile: req.body.mobile,
     photo: req.body.photo,
-    password: req.body.password,
     email: req.body.email,
+    password: req.body.password,
     passwordConfirm: req.body.passwordConfirm,
     passwordChangedAt: req.body.passwordChangedAt,
     role: req.body.role,
@@ -61,17 +60,19 @@ exports.addUser = catchAsync(async (req, res, next) => {
       user: user._id,
     });
   }
+  let data =
+    req.body.role === "professeur"
+      ? {
+          user: user,
+          professeur: professeur,
+        }
+      : {
+          user: user,
+        };
   res.status(200).json({
     status: "succés",
-    data:
-      req.body.role === "professeur"
-        ? {
-            user: user,
-            professeur: professeur,
-          }
-        : {
-            user: user,
-          },
+    message: `L'utilisateur est ajouter avec succés`,
+    data: data,
   });
 });
 // active or deactive user
@@ -112,6 +113,8 @@ exports.activeOrDisactiveUser = catchAsync(async (req, res, next) => {
 exports.updateUser = catchAsync(async (req, res, next) => {
   const id = req.params.id;
   const data = req.body;
+  let professeur = {};
+  const user_up = await User.findById(id);
   const user = await User.findByIdAndUpdate(id, data, {
     new: true,
     runValidators: true,
@@ -121,8 +124,18 @@ exports.updateUser = catchAsync(async (req, res, next) => {
     return next(new AppError("Aucun utilisateur trouvé avec cet ID", 404));
   }
 
+  if (req.body.role != "professeur" && user_up.role === "professeur") {
+    const user_prof = await Professeur.findOneAndDelete({ user: id });
+  } else if (req.body.role === "professeur" && user_up.role != "professeur") {
+    professeur = await Professeur.create({
+      user: user._id,
+    });
+  }
   res.status(201).json({
     status: "succés",
+    message: ` L'utilisateur est modifié ${
+      professeur ? ",le professeur est ajouté" : ""
+    } avec succés !`,
     user: user,
   });
 });
@@ -133,19 +146,18 @@ exports.deleteUser = catchAsync(async (req, res, next) => {
   if (!user) {
     return next(new AppError("Aucun utilisateur trouvé avec cet ID", 404));
   }
-  const professeur = await Professeur.findOneAndDelete({ user: user._id });
 
   res.status(200).json({
     status: "succés",
-    message: ` L'utilisateur ${
-      professeur ? `et l'enseignant(e) sont  supprimés` : "est  supprimé"
-    } avec succés !`,
+    message: user.nom,
   });
 });
 // 6) get User By ID
 exports.getUserById = catchAsync(async (req, res, next) => {
   const id = req.params.id;
-  const user = await User.findById(id);
+  const user = await User.findById(id)
+    .select("+password")
+    .select("+passwordConfirm");
   if (!user) {
     return next(new AppError("Aucun utilisateur trouvé avec cet ID", 404));
   }

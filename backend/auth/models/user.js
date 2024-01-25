@@ -134,4 +134,25 @@ userSchema.methods.getProfesseur = async function () {
     return professeur;
   } catch (error) {}
 };
+/* ---------------------------------------------------------------------------------- */
+userSchema.post(
+  ["findOneAndDelete", "findByIdAndUpdate"],
+  async function (user) {
+    console.log(" user remove midleweere work ....................");
+    const Cours = require("../../models/cours");
+    const Emploi = require("../../models/emploi");
+    const Professeur = require("../../models/professeur");
+    let message = `L'utilisateur : ${user.nom}  ${user.prenom} est suupprimé  avec succés .`;
+    const professeur = await user.getProfesseur();
+    if (professeur) {
+      message = `L'utilisateur de role eneignant(e) : ${user.nom}  ${user.prenom} est suupprimé  et ces [ cours, emploi] avec succés .`;
+      await Cours.deleteMany({ professeur: professeur._id });
+      await Emploi.deleteMany({ professeur: professeur._id });
+      await Professeur.findOneAndDelete({
+        user: user._id,
+      });
+    }
+    user.nom = message;
+  }
+);
 module.exports = mongoose.model("User", userSchema);

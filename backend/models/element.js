@@ -27,6 +27,21 @@ const elementSchema = mongoose.Schema({
   },
   creditTD: { type: Number, default: 0 },
 });
+elementSchema.pre("validate", async function (next) {
+  try {
+    if (this.professeurCM == undefined) {
+      this.professeurCM = undefined;
+    }
+    if (this.professeurTP == undefined) {
+      this.professeurTP = undefined;
+    }
+    if (this.professeurTD == undefined) {
+      this.professeurTD = undefined;
+    }
+  } catch (error) {
+    next(error);
+  }
+});
 /* ---------------------------------------------------------------------------------------------------------SAVE MDL------------------------- */
 elementSchema.pre("save", async function (next) {
   next();
@@ -47,21 +62,33 @@ elementSchema.methods.getProfCM_ProfTP_ProfTD = async function () {
   let profCM = "ll n'y a pas";
   let profTP = "ll n'y a pas";
   let profTD = "ll n'y a pas";
+  let profCM_id = "";
+  let profTD_id = "";
+  let profTP_id = "";
   const Professeur = require("./professeur");
   const professeurCM = await Professeur.findById(this.professeurCM);
   const professeurTP = await Professeur.findById(this.professeurTP);
   const professeurTD = await Professeur.findById(this.professeurTD);
   if (professeurCM) {
     profCM_user = await professeurCM.getInformation();
-    if (profCM_user) profCM = `${profCM_user[1]} ${profCM_user[2]}`;
+    if (profCM_user) {
+      profCM_id = professeurCM._id;
+      profCM = `${profCM_user[1]} ${profCM_user[2]}`;
+    }
   }
   if (professeurTP) {
     profTP_user = await professeurTP.getInformation();
-    if (profTP_user) profTP = `${profTP_user[1]} ${profTP_user[2]}`;
+    if (profTP_user) {
+      profTP_id = professeurTP._id;
+      profTP = `${profTP_user[1]} ${profTP_user[2]}`;
+    }
   }
   if (professeurTD) {
     profTD_user = await professeurTD.getInformation();
-    if (profTD_user) profTD = `${profTD_user[1]} ${profTD_user[2]}`;
+    if (profTD_user) {
+      profTD_id = professeurTD._id;
+      profTD = `${profTD_user[1]} ${profTD_user[2]}`;
+    }
   }
 
   return [profCM, profTP, profTD];
