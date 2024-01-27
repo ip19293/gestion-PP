@@ -48,7 +48,7 @@ const emploiSchema = mongoose.Schema({
   },
 });
 /* ===================================================================== validate midelwere ======================== */
-emploiSchema.pre("validate", async function (next) {
+/* emploiSchema.pre("validate", async function (next) {
   try {
     if (this.nbh > 3) {
       return next(
@@ -72,7 +72,7 @@ emploiSchema.pre("validate", async function (next) {
   } catch (error) {
     next(error);
   }
-});
+}); */
 /* ===================================================================== save  midelwere ======================== */
 emploiSchema.pre("save", async function (next) {
   const input = this.startTime.split(":");

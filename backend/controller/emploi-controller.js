@@ -52,6 +52,18 @@ exports.addEmploi = catchAsync(async (req, res, next) => {
     return next(
       new AppError("Aucun élément trouvé avec cet identifiant !", 404)
     );
+  } else {
+    let type = element["professeur" + req.body.type];
+    console.log(req.body.type);
+    let professeur = await Professeur.findById(type);
+    if (!professeur) {
+      return next(
+        new AppError(
+          `Il n'y a pas de professeur  ${req.body.type} de cette élément  !`,
+          404
+        )
+      );
+    }
   }
 
   const emplois_day = await Emploi.find({
@@ -110,8 +122,19 @@ exports.updateEmploi = async (req, res, next) => {
     return next(
       new AppError("Aucun élément trouvé avec cet identifiant !", 404)
     );
+  } else {
+    let type = element["professeur" + req.body.type];
+    console.log(type);
+    let professeur = await Professeur.findById(type);
+    if (!professeur) {
+      return next(
+        new AppError(
+          `Il n'y a pas de professeur  ${this.type} de cette élément  !`,
+          404
+        )
+      );
+    }
   }
-
   const emplois_day = await Emploi.find({
     _id: { $ne: id },
     dayNumero: req.body.dayNumero,

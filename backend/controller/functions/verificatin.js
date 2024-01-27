@@ -6,6 +6,11 @@ function createFinishTimeFromStartTimeAndVerifiedIsBetweenT1AndT2(
   type
 ) {
   let result = ["success", "this action successfully ....", add_emploi];
+  if (add_emploi.nbh > 3) {
+    result[2] = {};
+    result[0] = "failed";
+    result[1] = `Un cours ne peut pas durer plus de trois heures !"`;
+  }
   const input = add_emploi.startTime.split(":");
   let hour = parseInt(input[0]);
   let minute = parseInt(input[1]);
