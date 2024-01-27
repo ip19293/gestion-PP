@@ -51,16 +51,18 @@ exports.addGroup = catchAsync(async (req, res, next) => {
   }
   let group = await Group.findOne({
     semestre: req.body.semestre,
-    name: req.body.name,
+    numero: req.body.numero,
+    type: req.body.type,
   });
-  let ms = `Le groupe ${req.body.name} existe déja dans S${semestre.numero} ${filliere.niveau} ${filliere.name} !`;
+  let ms = `Le groupe ${req.body.numero} ${req.body.type} existe déja dans S${semestre.numero} ${filliere.niveau} ${filliere.name} !`;
 
   if (group) {
     return next(new AppError(ms, 404));
   }
 
   group = new Group({
-    name: req.body.name,
+    numero: req.body.numero,
+    type: req.body.type,
     semestre: req.body.semestre,
     startEmploi: req.body.startEmploi,
   });
@@ -101,17 +103,18 @@ exports.updateGroup = catchAsync(async (req, res, next) => {
   const gp = await Group.findOne({
     _id: { $ne: id },
     semestre: req.body.semestre,
-    name: req.body.name,
+    numero: req.body.numero,
+    type: req.body.type,
   });
 
-  let ms = `Le groupe ${req.body.name} existe déja dans S${semestre.numero} ${filliere.niveau} ${filliere.name} !`;
+  let ms = `Le groupe ${req.body.numero} ${req.body.type} existe déja dans S${semestre.numero} ${filliere.niveau} ${filliere.name} !`;
 
   if (gp) {
     return next(new AppError(ms, 404));
   }
   group.semestre = req.body.semestre;
-  group.name = req.body.name;
-  group.startEmploi = req.body.startEmploi;
+  group.numero = req.body.numero;
+  group.type = req.body.type;
   await group.save();
   res.status(201).json({
     status: "succés",
@@ -190,7 +193,7 @@ exports.deleteGroup = catchAsync(async (req, res, next) => {
 
   res.status(200).json({
     status: "succés",
-    message: group.name,
+    message: `Le groupe est supprimé avec succés avec liste d'emploi .`,
   });
 });
 
@@ -227,7 +230,8 @@ exports.getAllGroupsInFilliere = catchAsync(async (req, res, next) => {
           semestre: x._id,
           semestre_numero: x.numero,
           _id: y._id,
-          name: y.name,
+          numero: y.numero,
+          type: y.type,
         };
         all_groups.push(data);
         groups.push(y);
@@ -326,7 +330,8 @@ exports.getGroupEmplois = catchAsync(async (req, res, next) => {
     annee: group_info[4],
     semestre: group_info[0],
     niveau: filliere.niveau,
-    group: group.name,
+    group: group.numero,
+    group_type: group.type,
     emplois,
   });
 });

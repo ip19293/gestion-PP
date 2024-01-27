@@ -43,10 +43,17 @@ elementSchema.pre("validate", async function (next) {
   }
 });
 /* ---------------------------------------------------------------------------------------------------------SAVE MDL------------------------- */
-elementSchema.pre("save", async function (next) {
+/* elementSchema.pre("save", async function (next) {
   next();
-});
+}); */
+elementSchema.post("findOneAndDelete", async function (element) {
+  console.log(" element remove midleweere work ....................");
+  const Cours = require("./cours");
+  const Emploi = require("./emploi");
 
+  await Cours.deleteMany({ element: element._id });
+  await Emploi.deleteMany({ element: element._id });
+});
 elementSchema.methods.getSemestre_Filiere_Matiere = async function () {
   const Matiere = require("./matiere");
   const Semestre = require("./semestre");

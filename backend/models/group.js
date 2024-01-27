@@ -1,14 +1,19 @@
 const mongoose = require("mongoose");
 const AppError = require("../utils/appError");
 const groupSchema = mongoose.Schema({
-  name: {
-    type: String,
+  numero: {
+    type: Number,
     select: true,
-    default: "A",
-    required: [true, "Le nom du groupe est requis !"],
-    enum: ["A", "B", "C", "D", "E"],
+    default: 1,
+    required: [true, "Le numero du groupe est requis !"],
   },
-  startEmploi: {
+  type: {
+    type: String,
+    default: "CM",
+    required: [true, "Le type est requis !"],
+    enum: ["CM", "TD/TP"],
+  },
+  /*   startEmploi: {
     type: Date,
     select: true,
     default: Date.now(),
@@ -22,15 +27,15 @@ const groupSchema = mongoose.Schema({
       f.setMonth(start + 4);
       return f;
     },
-  },
+  }, */
   semestre: {
     type: mongoose.Schema.ObjectId,
     ref: "Semestre",
     required: [true, "semestre est requis !"],
   },
 });
-groupSchema.pre("save", async function (next) {
-  /*  const Semestre = require("./semestre");
+/* groupSchema.pre("save", async function (next) {
+   const Semestre = require("./semestre");
   const Filliere = require("./filliere");
   const semestre = await Semestre.findById(this.semestre);
   const filliere = await Filliere.findById(semestre.filliere);
@@ -54,13 +59,12 @@ groupSchema.pre("save", async function (next) {
       return next(new AppError(ms, 404));
     }
   
-  } */
+  }
   next();
-});
+}); */
 groupSchema.methods.getSNumero_FId_FName_FNiveau_NiveauAnnee =
   async function () {
     const Semestre = require("./semestre");
-    const Emploi = require("./emploi");
     const Filliere = require("./filliere");
     let data = [];
     const semestre = await Semestre.findById(this.semestre);
@@ -83,8 +87,8 @@ groupSchema.post("findOneAndDelete", async function (group) {
   console.log(" group remove midleweere work ....................");
   const Emploi = require("./emploi");
   await Emploi.deleteMany({ group: group._id });
-  group.name = `le groupe est supprimé avec succés avec liste d'emploi .`;
-  console.log(`${group.name}`);
+  let ms = `le groupe est supprimé avec succés avec liste d'emploi .`;
+  console.log(`${ms}`);
 });
 
 module.exports = mongoose.model("Group", groupSchema);
