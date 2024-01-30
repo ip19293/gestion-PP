@@ -36,11 +36,10 @@ const emploiSchema = mongoose.Schema({
     ref: "Group",
     required: [true, "le group est requis !"],
   },
-  /*  professeur: {
+  professeur: {
     type: mongoose.Schema.ObjectId,
     ref: "Professeur",
-    required: [true, "enseignant est requis !"],
-  }, */
+  },
   element: {
     type: mongoose.Schema.ObjectId,
     ref: "Element",
@@ -75,6 +74,11 @@ const emploiSchema = mongoose.Schema({
 }); */
 /* ===================================================================== save  midelwere ======================== */
 emploiSchema.pre("save", async function (next) {
+  const element = await Element.findById(this.element);
+  console.log(element);
+  let type = element["professeur" + this.type];
+  let professeur = await Professeur.findById(type);
+  this.professeur = professeur._id;
   const input = this.startTime.split(":");
   let hour = parseInt(input[0]);
   let minute = parseInt(input[1]);
@@ -110,11 +114,11 @@ emploiSchema.methods.getDayName = async function () {
 };
 emploiSchema.methods.getProfesseurMatiere = async function () {
   const element = await Element.findById(this.element);
+  console.log(element);
   let type = element["professeur" + this.type];
   let professeur = await Professeur.findById(type);
   let prof_info = await professeur.getInformation();
   const matiere = await Matiere.findById(element.matiere);
-
   let res = [
     prof_info[0],
     prof_info[1],

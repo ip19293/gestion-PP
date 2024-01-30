@@ -80,27 +80,33 @@ professeurSchema.methods.getInfo_Nbh_TH_Nbc_Somme = async function (
     debit !== undefined && fin !== undefined
       ? {
           date: { $gte: debitDate, $lte: finDate },
-          professeur: this._id,
+          /*   professeur: this._id, */
           isSigned: "oui",
           isPaid: "pas encore",
         }
-      : { professeur: this._id, isSigned: "oui", isPaid: "pas encore" };
+      : { /* professeur: this._id, */ isSigned: "oui", isPaid: "pas encore" };
   const prof_cours = await Cours.find(query).sort({ date: 1 });
   let nbh = 0;
   let th = 0;
   let nbc = 0;
   let somme = 0;
-  if (prof_cours.length != 0) {
-    debitDate = prof_cours[0].date;
-    finDate = prof_cours[prof_cours.length - 1].date;
-  }
+
+  debitDate = prof_cours.length != 0 ? prof_cours[0].date : new Date();
+  finDate =
+    prof_cours.length != 0
+      ? prof_cours[prof_cours.length - 1].date
+      : new Date();
+
   for (x of prof_cours) {
-    let cours = await Cours.findById(x._id);
+    /*     let cours = await Cours.findById(x._id); */
     let cours_info = await x.getTHSomme();
-    nbh = x.nbh + nbh;
-    th = cours_info[0] + th;
-    nbc = nbc + 1;
-    somme = cours_info[1] + somme;
+    let prof_matiere_info = await x.getProfesseurMatiere();
+    if (prof_matiere_info[0].equals(this._id)) {
+      nbh = x.nbh + nbh;
+      th = cours_info[0] + th;
+      nbc = nbc + 1;
+      somme = cours_info[1] + somme;
+    }
   }
   return [
     this._id,

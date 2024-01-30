@@ -129,7 +129,7 @@ exports.updateEmploi = async (req, res, next) => {
     if (!professeur) {
       return next(
         new AppError(
-          `Il n'y a pas de professeur  ${this.type} de cette élément  !`,
+          `Il n'y a pas de professeur  ${req.body.type} de cette élément  !`,
           404
         )
       );
@@ -269,7 +269,6 @@ exports.getEmploisByProfesseurId = catchAsync(async (req, res, next) => {
   if (groupedEmploi.Samedi) data.push(groupedEmploi.Samedi); */
   res.status(200).json({
     status: "succés",
-
     groupedEmploi,
     emplois,
   });

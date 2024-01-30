@@ -15,5 +15,8 @@ elementRouter
   .delete(authController.protect, elementController.deleteElement)
   .get(authController.protect, elementController.getElement)
   .patch(authController.protect, elementController.updateElement);
+elementRouter
+  .route("/:id/groups")
+  .get(authController.protect, elementController.getGroupsByElementId);
 
 module.exports = elementRouter;

@@ -30,4 +30,7 @@ matiereRouter
 matiereRouter
   .route("/:id/professeurs")
   .get(matiereController.getProfesseursByMatiereId);
+matiereRouter
+  .route("/:id/elements")
+  .get(matiereController.getElementsByMatiereId);
 module.exports = matiereRouter;

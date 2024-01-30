@@ -11,7 +11,7 @@ const elementSchema = mongoose.Schema({
     ref: "Matiere",
     required: [true, "Le matiére est requis !"],
   },
-  creditCM: { type: Number, default: 0 },
+  heuresCM: { type: Number, default: 0 },
   professeurCM: {
     type: mongoose.Schema.ObjectId,
     ref: "Professeur",
@@ -20,12 +20,12 @@ const elementSchema = mongoose.Schema({
     type: mongoose.Schema.ObjectId,
     ref: "Professeur",
   },
-  creditTP: { type: Number, default: 0 },
+  heuresTP: { type: Number, default: 0 },
   professeurTD: {
     type: mongoose.Schema.ObjectId,
     ref: "Professeur",
   },
-  creditTD: { type: Number, default: 0 },
+  heuresTD: { type: Number, default: 0 },
 });
 elementSchema.pre("validate", async function (next) {
   try {
@@ -46,6 +46,7 @@ elementSchema.pre("validate", async function (next) {
 /* elementSchema.pre("save", async function (next) {
   next();
 }); */
+
 elementSchema.post("findOneAndDelete", async function (element) {
   console.log(" element remove midleweere work ....................");
   const Cours = require("./cours");

@@ -1,6 +1,7 @@
 const APIFeatures = require("../utils/apiFeatures");
 const Matiere = require("../models/matiere");
 const Professeur = require("../models/professeur");
+const Element = require("../models/element");
 const catchAsync = require("../utils/catchAsync");
 const AppError = require("../utils/appError");
 const Categorie = require("../models/categorie");
@@ -43,6 +44,29 @@ exports.deleteAllMatieres = catchAsync(async (req, res, next) => {
   res.status(200).json({
     status: "succés",
     message: "all matieres is deleted",
+  });
+});
+exports.getElementsByMatiereId = catchAsync(async (req, res, next) => {
+  let elements = [];
+  const elements_list = await Element.find({
+    matiere: req.params.id,
+  });
+  for (el of elements_list) {
+    let element = await Element.findById(el._id);
+    let element_info = await element.getSemestre_Filiere_Matiere();
+    let dt = {
+      _id: el._id,
+      creditCM: el.creditCM,
+      semestre: element_info[0],
+      filiere: element_info[1],
+      matiere: element_info[2],
+    };
+    elements.push(dt);
+  }
+
+  res.status(200).json({
+    status: "succés",
+    elements,
   });
 });
 exports.getProfesseursByMatiereId = catchAsync(async (req, res, next) => {

@@ -1,6 +1,6 @@
 const APIFeatures = require("../utils/apiFeatures");
 const Element = require("../models/element");
-const Professeur = require("../models/professeur");
+const Group = require("../models/group");
 const catchAsync = require("../utils/catchAsync");
 const AppError = require("../utils/appError");
 const Semestre = require("../models/semestre");
@@ -29,9 +29,9 @@ exports.getElements = catchAsync(async (req, res, next) => {
       _id: x._id,
       semestre_id: x.semestre,
       matiere_id: x.matiere,
-      creditCM: x.creditCM,
-      creditTP: x.creditTP,
-      creditTD: x.creditTD,
+      heuresCM: x.heuresCM,
+      heuresTP: x.heuresTP,
+      heuresTD: x.heuresTD,
       code: matiere_info[0],
       taux: matiere_info[1],
       semestre: element_info[0],
@@ -79,9 +79,9 @@ exports.addElement = catchAsync(async (req, res, next) => {
     professeurCM: req.body.professeurCM,
     professeurTD: req.body.professeurTD,
     professeurTP: req.body.professeurTP,
-    creditCM: req.body.creditCM,
-    creditTP: req.body.creditTP,
-    creditTD: req.body.creditTD,
+    heuresCM: req.body.heuresCM,
+    heuresTP: req.body.heuresTP,
+    heuresTD: req.body.heuresTD,
   });
   res.status(200).json({
     status: "succés",
@@ -127,9 +127,9 @@ exports.updateElement = catchAsync(async (req, res, next) => {
     req.body.professeurTD != "" ? req.body.professeurTD : undefined;
   element.professeurTP =
     req.body.professeurTP != "" ? req.body.professeurTP : undefined;
-  element.creditCM = req.body.creditCM;
-  element.creditTD = req.body.creditTD;
-  element.creditTP = req.body.creditTP;
+  element.heuresCM = req.body.heuresCM;
+  element.heuresTD = req.body.heuresTD;
+  element.heuresTP = req.body.heuresTP;
   await element.save();
   res.status(201).json({
     status: "succés",
@@ -148,7 +148,7 @@ exports.deleteElement = catchAsync(async (req, res, next) => {
   }
   res.status(200).json({
     status: "succés",
-    message: element.name,
+    message: ``,
   });
 });
 exports.getElement = catchAsync(async (req, res, next) => {
@@ -162,5 +162,20 @@ exports.getElement = catchAsync(async (req, res, next) => {
   res.status(200).json({
     status: "succés",
     element: element,
+  });
+});
+exports.getGroupsByElementId = catchAsync(async (req, res, next) => {
+  const id = req.params.id;
+  const element = await Element.findById(id);
+  if (!element) {
+    return next(
+      new AppError("Aucune matière trouvée avec cet identifiant !", 404)
+    );
+  }
+  const groupes = await Group.find({ semestre: element.semestre });
+
+  res.status(200).json({
+    status: "succés",
+    groupes: groupes,
   });
 });
