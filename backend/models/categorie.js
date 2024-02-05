@@ -17,17 +17,37 @@ const categorieSchema = mongoose.Schema(
       default: "",
       trim: true,
     },
+    code: {
+      type: String,
+    },
     prix: {
       type: Number,
       required: [true, "le prix est requis !"],
-      default: 100,
-      min: [100, "Le prix doi etre supperiére a 100 !"],
+      default: 900,
+      min: [500, "Le prix doi etre supperiére a 500 !"],
       max: [900, "Le prix doi etre inferiére a 900 !"],
     },
   },
   { timestamps: true }
 );
-
+categorieSchema.pre("save", async function (next) {
+  let categorie_code = "";
+  let name_part = this.name.split(" ");
+  if (!name_part[1]) {
+    categorie_code = name_part[0].substr(0, 3).toLocaleUpperCase();
+  } else if (name_part[1] && !name_part[2]) {
+    categorie_code =
+      name_part[0].substr(0, 2).toLocaleUpperCase() +
+      name_part[1].substr(0, 1).toLocaleUpperCase();
+  } else {
+    name_part.forEach((element) => {
+      categorie_code =
+        categorie_code + element.substr(0, 1).toLocaleUpperCase();
+    });
+  }
+  this.code = categorie_code;
+  next();
+});
 categorieSchema.methods.getCodeNbmatieres = async function () {
   const Matiere = require("./matiere");
   nb_matieres = await Matiere.find({ categorie: this._id }).count();

@@ -5,6 +5,7 @@ const Element = require("../models/element");
 const catchAsync = require("../utils/catchAsync");
 const AppError = require("../utils/appError");
 const Categorie = require("../models/categorie");
+const semestre = require("../models/semestre");
 exports.getMatieres = catchAsync(async (req, res, next) => {
   let filter = {};
   if (req.params.id) filter = { cours: req.params.id };
@@ -37,6 +38,91 @@ exports.getMatieres = catchAsync(async (req, res, next) => {
   res.status(200).json({
     status: "succés",
     matieres,
+  });
+});
+
+/* ==================================================upload matiere data ======================================== */
+exports.uploadMatieres = catchAsync(async (req, res, next) => {
+  const XLSX = require("xlsx");
+  const fileName = req.file.filename;
+  let message = "Le fichier est téléchargé avec succés";
+  let url = `C:/Users/HP/Desktop/gestion-PP/backend/uploads//${fileName}`;
+  const workbook = XLSX.readFile(url, { cellDates: true });
+  const sheetName = workbook.SheetNames[0];
+  console.log(sheetName);
+  const emploiName = workbook.Sheets[sheetName];
+  const jsonData = XLSX.utils.sheet_to_json(emploiName);
+
+  // Extract data from the first two columns
+  const columnData = XLSX.utils.sheet_to_json(emploiName, {
+    header: 1,
+    range: "A1:B" + emploiName["!ref"].split(":")[1].replace(/\D/g, ""),
+  });
+  const finalJsonData = columnData.filter((row) => row.length > 0);
+  const categoris = await Categorie.find();
+
+  if (
+    ["code", "CodeEM", "Code"].includes(finalJsonData[1][0]) &&
+    ["nom", "Titre", "nom de la matiere"].includes(finalJsonData[1][1])
+  ) {
+    for (const [index, x] of finalJsonData.entries()) {
+      if (x[0] == null || x[0] === "code" || x[0] === "CodeEM") {
+        console.log(x[1]);
+      } else {
+        const Oldmatiere = await Matiere.findOne({ name: x[1] });
+        if (!Oldmatiere) {
+          //find categorie by code
+          const categorie = await Categorie.findOne({
+            code: x[0].substring(0, 3),
+          });
+          if (categorie) {
+            console.log("La matiere n'existe pas !");
+            let dt = {
+              categorie: categorie._id,
+              code: x[0].substring(0, 3),
+              name: x[1],
+            };
+            console.log(dt);
+            const matiere = new Matiere(dt);
+            await matiere.save();
+            console.log(matiere);
+          } else {
+            console.log("Le catégorie n'existe pas !");
+            let name = x[0].substring(0, 3);
+            const categorie = await Categorie.findOne({
+              name: name.toLowerCase(),
+            });
+            if (!categorie) {
+              let dt = {
+                name: x[0].substring(0, 3),
+                description: x[0].substring(0, 3),
+              };
+              const newCategorie = new Categorie(dt);
+              await newCategorie.save();
+              if (newCategorie) {
+                let data = {
+                  categorie: newCategorie._id,
+                  code: x[0].substring(0, 3),
+                  name: x[1],
+                };
+                const matiere = new Matiere(data);
+                await matiere.save();
+              }
+            }
+          }
+        }
+      }
+    }
+  } else {
+    message = "Le fichier non valide !";
+  }
+
+  console.log(jsonData[4][0]);
+  console.log(fileName);
+  res.status(200).json({
+    status: "succés",
+    finalJsonData,
+    message,
   });
 });
 exports.deleteAllMatieres = catchAsync(async (req, res, next) => {
