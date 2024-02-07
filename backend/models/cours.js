@@ -34,21 +34,20 @@ const coursSchema = mongoose.Schema(
       type: mongoose.Schema.ObjectId,
       ref: "Professeur",
     },
-    /*   matiere: {
+    matiere: {
       type: mongoose.Schema.ObjectId,
       ref: "Matiere",
-      required: [true, "matiére est requis"],
-    }, */
+    },
     element: {
       type: mongoose.Schema.ObjectId,
       ref: "Element",
       required: [true, "element est requis"],
     },
-    group: {
+    /*    group: {
       type: mongoose.Schema.ObjectId,
       ref: "Group",
       required: [true, "le group est requis !"],
-    },
+    }, */
     isSigned: {
       type: String,
       default: "pas encore",
@@ -95,7 +94,8 @@ coursSchema.pre("save", async function (next) {
   const element = await Element.findById(this.element);
   let type = element["professeur" + this.type];
   let professeur = await Professeur.findById(type);
-
+  let matiere = await Matiere.findById(element.matiere);
+  this.matiere = matiere._id;
   this.professeur = professeur._id;
   const input = this.startTime.split(":");
   let hour = parseInt(input[0]);

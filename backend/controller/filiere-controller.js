@@ -1,18 +1,16 @@
 const APIFeatures = require("../utils/apiFeatures");
-const Filliere = require("../models/filliere");
+const Filiere = require("../models/filiere");
 const Element = require("../models/element");
 const catchAsync = require("../utils/catchAsync");
 const AppError = require("../utils/appError");
-
 const Semestre = require("../models/semestre");
 const Matiere = require("../models/matiere");
-const FilliereDetail = require("./json-response/filliere/filliere-semestre-elements");
 
-exports.getFillieres = catchAsync(async (req, res, next) => {
+exports.getFilieres = catchAsync(async (req, res, next) => {
   let filter = {};
   if (req.params.id) filter = { cours: req.params.id };
   const features = new APIFeatures(
-    Filliere.find(),
+    Filiere.find(),
     /* .populate({
       path: "categorie",
     }) */ req.query
@@ -21,33 +19,34 @@ exports.getFillieres = catchAsync(async (req, res, next) => {
     .sort()
     .limitFields()
     .pagination();
-  const fillieres = await features.query;
+  const filieres = await features.query;
 
   res.status(200).json({
     status: "succès",
-    fillieres,
+    filieres,
   });
 });
-exports.deleteAllFillieres = catchAsync(async (req, res, next) => {
-  await Filliere.deleteMany();
+exports.deleteAllFilieres = catchAsync(async (req, res, next) => {
+  await Filiere.deleteMany();
   res.status(200).json({
     status: "succès",
-    message: "all fillieres is deleted",
+    message: "all Filieres is deleted",
   });
 });
-exports.addFilliere = catchAsync(async (req, res, next) => {
+/* -----------------------------------------------------------ADD NEW Filiere-------------------------------------------------------------- */
+exports.addFiliere = catchAsync(async (req, res, next) => {
   const data = req.body;
-  const Oldfilliere = await Filliere.findOne({
+  const Oldfiliere = await Filiere.findOne({
     name: req.body.name,
     niveau: req.body.niveau,
   });
-  if (Oldfilliere) {
+  if (Oldfiliere) {
     return res.status(400).json({
       status: "échec",
-      message: `La filière ${Oldfilliere.niveau} ${Oldfilliere.name} existe déjà !`,
+      message: `La filière ${Oldfiliere.niveau} ${Oldfiliere.name} existe déjà !`,
     });
   }
-  const filliere = await Filliere.create({
+  const filiere = await Filiere.create({
     name: req.body.name,
     niveau: req.body.niveau,
     description: req.body.description,
@@ -56,28 +55,28 @@ exports.addFilliere = catchAsync(async (req, res, next) => {
   res.status(200).json({
     status: "succès",
     message: `La filière est ajouté avec succés .`,
-    filliere,
+    filiere,
   });
 });
 
-exports.updateFilliere = catchAsync(async (req, res, next) => {
+exports.updateFiliere = catchAsync(async (req, res, next) => {
   const id = req.params.id;
-  const Oldfilliere = await Filliere.findOne({
+  const Oldfiliere = await Filiere.findOne({
     name: req.body.name,
     niveau: req.body.niveau,
   });
-  if (Oldfilliere && !Oldfilliere._id.equals(id)) {
+  if (Oldfiliere && !Oldfiliere._id.equals(id)) {
     return res.status(400).json({
       status: "échec",
-      message: `La filière ${Oldfilliere.niveau} ${Oldfilliere.name} existe déjà ...`,
+      message: `La filière ${Oldfiliere.niveau} ${Oldfiliere.name} existe déjà ...`,
     });
   }
-  const filliere = await Filliere.findById(id);
-  filliere.name = req.body.name;
-  filliere.niveau = req.body.niveau;
-  filliere.description = req.body.description;
-  await filliere.save();
-  if (!filliere) {
+  const filiere = await Filiere.findById(id);
+  filiere.name = req.body.name;
+  filiere.niveau = req.body.niveau;
+  filiere.description = req.body.description;
+  await filiere.save();
+  if (!filiere) {
     return next(
       new AppError("La filière avec cet identifiant introuvable !", 404)
     );
@@ -85,91 +84,119 @@ exports.updateFilliere = catchAsync(async (req, res, next) => {
   res.status(201).json({
     status: "succès",
     message: `La filière est modifié avec succés .`,
-    filliere: filliere,
+    filiere: filiere,
   });
 });
 /* ================================================ DELETE================================================ */
-exports.deleteFilliere = catchAsync(async (req, res, next) => {
+exports.deleteFiliere = catchAsync(async (req, res, next) => {
   const id = req.params.id;
-  const filliere = await Filliere.findOneAndDelete({ _id: id });
-  if (!filliere) {
+  const filiere = await Filiere.findOneAndDelete({ _id: id });
+  if (!filiere) {
     return next(
       new AppError("La filière avec cet identifiant introuvable !", 404)
     );
   }
   res.status(200).json({
     status: "succès",
-    message: filliere.name,
+    message: filiere.name,
   });
 });
 /* ======================================================GET BY ID=========================================== */
-exports.getFilliere = catchAsync(async (req, res, next) => {
+exports.getFiliere = catchAsync(async (req, res, next) => {
   const id = req.params.id;
-  const filliere = await Filliere.findById(id);
-  let filliere_info = await filliere.getPeriodePlace();
-  if (!filliere) {
+  const filiere = await Filiere.findById(id);
+  let filiere_info = await filiere.getPeriodePlace();
+  if (!filiere) {
     return next(
       new AppError("La filière avec cet identifiant introuvable !", 404)
     );
   }
   res.status(200).json({
     status: "succès",
-    filliere_info,
-    filliere,
+    filiere_info,
+    filiere,
   });
 });
 /* ====================================================== GET SEMESTRES BY FILIERE ID =====================*/
 exports.getSemestresByFiliereId = catchAsync(async (req, res, next) => {
   const id = req.params.id;
-  const filliere = await Filliere.findById(id);
-  if (!filliere) {
+  const filiere = await Filiere.findById(id);
+  if (!filiere) {
     return next(
       new AppError("La filière avec cet identifiant introuvable !", 404)
     );
   }
-  const semestres = await Semestre.find({ filliere: id });
+  const semestres = await Semestre.find({ filiere: id });
   res.status(200).json({
     status: "succès",
-    _id: filliere._id,
-    filliere: filliere.name,
-    description: filliere.description,
-    niveau: filliere.niveau,
+    _id: filiere._id,
+    filiere: filiere.name,
+    description: filiere.description,
+    niveau: filiere.niveau,
     semestres: semestres,
   });
 });
 /* ====================================================GET DETAIL LIST OF SEMESTRES========================== */
-exports.getFilliereDetail = catchAsync(async (req, res, next) => {
+exports.getFiliereDetail = catchAsync(async (req, res, next) => {
   const id = req.params.id;
-  const filliere = await Filliere.findById(id);
+  const filiere = await Filiere.findById(id);
   let list_semestres = [];
-  if (!filliere) {
+  let elements = [];
+  if (!filiere) {
     return next(
       new AppError("La filière avec cet identifiant introuvable !", 404)
     );
   }
+  const list_elements = await Element.find({ filiere: id }).sort({
+    semestre: 1,
+  });
+  let filiere_info = await filiere.getPeriodePlace();
+  for (elem of list_elements) {
+    let elem_info = await elem.getFiliere_Matiere();
+    let elem_profs = await elem.getProfCM_ProfTP_ProfTD();
+    let matiere_info = await elem_info[1].getCodePrixCNameCCode();
+    let code =
+      matiere_info[3] + elem.semestre + filiere_info[1] + elem_info[1].numero;
 
-  const semestres = await Semestre.find({ filliere: id });
+    let dt = {
+      _id: elem._id,
+      filiere: elem.filiere,
+      semestre: elem.semestre,
+      matiere: elem.matiere,
+      heuresCM: elem.heuresCM,
+      heuresTP: elem.heuresTP,
+      heuresTD: elem.heuresTD,
+      name_EM: elem_info[1].name,
+      categorie: elem_info[1].categorie,
+      code_EM: code,
+      professeurCM: elem_profs[0],
+      professeurTP: elem_profs[1],
+      professeurTD: elem_profs[2],
+    };
+    elements.push(dt);
+  }
+  /*   const semestres = await Semestre.find({ filiere: id });
   for (s of semestres) {
     if (s.numero != null) {
       list_semestres.push(s.numero);
     }
   }
-
-  const data = await getFilliereSemestresElements(semestres, filliere);
+  const data = await getFilliereSemestresElements(semestres, filliere); */
   res.status(200).json({
     status: "succès",
-    _id: filliere._id,
-    filliere: filliere.name,
-    description: filliere.description,
-    niveau: filliere.niveau,
-    semestres: list_semestres,
-    elements: data,
+    _id: filiere._id,
+    filiere: filiere.name,
+    description: filiere.description,
+    niveau: filiere.niveau,
+    //semestres: list_semestres,
+    // elements: data,
+    elements: elements,
   });
 });
 
 /* -----------------------------------------------------------FUNCTIONS----------------------- */
 /* 1) GET SEMESTRE WITH ELEMENTS  ----------------------------*/
-async function getFilliereSemestresElements(semestres, filliere) {
+/* async function getFilliereSemestresElements(semestres, filliere) {
   let data = [];
   let filliere_info = await filliere.getPeriodePlace();
   if (Array.isArray(semestres)) {
@@ -201,4 +228,4 @@ async function getFilliereSemestresElements(semestres, filliere) {
     }
   }
   return data;
-}
+} */

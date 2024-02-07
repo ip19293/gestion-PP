@@ -1,6 +1,6 @@
 const mongoose = require("mongoose");
-const Categorie = require("../models/categorie");
-const Matiere = require("../models/matiere");
+const Categorie = require("./categorie");
+const Matiere = require("./matiere");
 const group = require("./group");
 const filiereSchema = mongoose.Schema({
   name: { type: String, required: true, lowercase: true },
@@ -13,6 +13,22 @@ const filiereSchema = mongoose.Schema({
     type: String,
     default: "",
   },
+  /* 
+  debutSemestrePaire: {
+    type: Date,
+    select: true,
+    default: Date.now(),
+  },
+  debutSemestreInPaire: {
+    type: Date,
+    select: true,
+    default: function () {
+      const start = this.start.getMonth();
+      const f = new Date(this.start);
+      f.setMonth(start + 4);
+      return f;
+    },
+  }, */
 });
 
 filiereSchema.methods.getPeriodePlace = function () {

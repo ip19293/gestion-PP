@@ -65,7 +65,7 @@ const groupSchema = mongoose.Schema({
 groupSchema.methods.getSNumero_FId_FName_FNiveau_NiveauAnnee =
   async function () {
     const Semestre = require("./semestre");
-    const Filliere = require("./filliere");
+    const Filliere = require("./filiere");
     let data = [];
     const semestre = await Semestre.findById(this.semestre);
     let semestre_info = await semestre.getNiveauAnnee();

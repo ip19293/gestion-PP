@@ -1,5 +1,5 @@
 const APIFeatures = require("../utils/apiFeatures");
-const Filliere = require("../models/filliere");
+const Filliere = require("../models/filiere");
 const Semestre = require("../models/semestre");
 const Matiere = require("../models/matiere");
 const Element = require("../models/element");

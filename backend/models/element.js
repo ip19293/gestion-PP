@@ -1,10 +1,39 @@
 const mongoose = require("mongoose");
+const Filiere = require("./filiere");
+const Professeur = require("./professeur");
 
 const elementSchema = mongoose.Schema({
-  semestre: {
+  /*   semestre: {
     type: mongoose.Schema.ObjectId,
     ref: "Semestre",
     required: [true, "Le semestre est requis !"],
+  }, */
+
+  filiere: {
+    type: mongoose.Schema.ObjectId,
+    ref: "Filiere",
+    required: [true, "La filiere est requis !"],
+    select: true,
+  },
+  semestre: {
+    required: [true, "Numéro de semestre est requis !"],
+    type: Number,
+    select: true,
+    enum: [1, 2, 3, 4, 5, 6],
+    validate: {
+      // this only works on CREATE and SAVE!!!
+      validator: async function (el) {
+        const filiere = await Filiere.findById(this.filiere);
+        let filiere_info = await filiere.getPeriodePlace();
+        let periode = 2 * filiere_info[0];
+        return el <= periode;
+      },
+      message: function () {
+        let periode = this.periode;
+        let niveau = this.filiere.niveau;
+        return `Seulement  ${periode} semestres dans ${niveau} !`;
+      },
+    },
   },
   matiere: {
     type: mongoose.Schema.ObjectId,
@@ -12,22 +41,29 @@ const elementSchema = mongoose.Schema({
     required: [true, "Le matiére est requis !"],
   },
   heuresCM: { type: Number, default: 0 },
-  professeurCM: {
-    type: mongoose.Schema.ObjectId,
-    ref: "Professeur",
-  },
-  professeurTP: {
-    type: mongoose.Schema.ObjectId,
-    ref: "Professeur",
-  },
   heuresTP: { type: Number, default: 0 },
-  professeurTD: {
-    type: mongoose.Schema.ObjectId,
-    ref: "Professeur",
-  },
   heuresTD: { type: Number, default: 0 },
+  professeurCM: [
+    {
+      type: mongoose.Schema.ObjectId,
+      ref: "Professeur",
+    },
+  ],
+  professeurTP: [
+    {
+      type: mongoose.Schema.ObjectId,
+      ref: "Professeur",
+    },
+  ],
+
+  professeurTD: [
+    {
+      type: mongoose.Schema.ObjectId,
+      ref: "Professeur",
+    },
+  ],
 });
-elementSchema.pre("validate", async function (next) {
+/* elementSchema.pre("validate", async function (next) {
   try {
     if (this.professeurCM == undefined) {
       this.professeurCM = undefined;
@@ -41,12 +77,64 @@ elementSchema.pre("validate", async function (next) {
   } catch (error) {
     next(error);
   }
-});
+}); */
 /* ---------------------------------------------------------------------------------------------------------SAVE MDL------------------------- */
 /* elementSchema.pre("save", async function (next) {
   next();
 }); */
-
+elementSchema.pre("save", async function (next) {
+  const unqRef = [...new Set(this.professeurCM.map(String))];
+  const unqRefTP = [...new Set(this.professeurTP.map(String))];
+  const unqRefTD = [...new Set(this.professeurTD.map(String))];
+  if (
+    this.professeurCM.length !== unqRef.length ||
+    this.professeurTD.length !== unqRefTD.length ||
+    this.professeurTP.length !== unqRefTP.length
+  ) {
+    const error = new Error(
+      "ID d'objets en double dans les professeur référence !"
+    );
+    return next(error);
+  }
+  try {
+    const existe_professeurCM = await Promise.all(
+      this.professeurCM.map(async (el) => {
+        const refDoc = await Professeur.findById(el);
+        if (!refDoc) {
+          throw new Error(
+            `Aucun document reference trouvé pour cet identifiant: ${el} !`
+          );
+        }
+        return refDoc;
+      })
+    );
+    const existe_professeurTD = await Promise.all(
+      this.professeurTD.map(async (el) => {
+        const refDoc = await Professeur.findById(el);
+        if (!refDoc) {
+          throw new Error(
+            `Aucun document reference trouvé pour cet identifiant: ${el} !`
+          );
+        }
+        return refDoc;
+      })
+    );
+    const existe_professeurTP = await Promise.all(
+      this.professeurTP.map(async (el) => {
+        const refDoc = await Professeur.findById(el);
+        if (!refDoc) {
+          throw new Error(
+            `Aucun document reference trouvé pour cet identifiant: ${el} !`
+          );
+        }
+        return refDoc;
+      })
+    );
+    next();
+  } catch (error) {
+    next(error);
+  }
+});
 elementSchema.post("findOneAndDelete", async function (element) {
   console.log(" element remove midleweere work ....................");
   const Cours = require("./cours");
@@ -55,18 +143,61 @@ elementSchema.post("findOneAndDelete", async function (element) {
   await Cours.deleteMany({ element: element._id });
   await Emploi.deleteMany({ element: element._id });
 });
-elementSchema.methods.getSemestre_Filiere_Matiere = async function () {
+
+elementSchema.methods.getFiliere_Matiere = async function () {
   const Matiere = require("./matiere");
-  const Semestre = require("./semestre");
-  const Filliere = require("./filliere");
+  const Filiere = require("./filiere");
   try {
     const matiere = await Matiere.findById(this.matiere);
-    const semestre = await Semestre.findById(this.semestre);
-    const filliere = await Filliere.findById(semestre.filliere);
-    return [semestre.numero, filliere.name, matiere.name];
+    const filiere = await Filiere.findById(this.filiere);
+    return [filiere, matiere];
   } catch (error) {}
 };
 elementSchema.methods.getProfCM_ProfTP_ProfTD = async function () {
+  const Professeur = require("./professeur");
+  let profCM = [];
+  let profTP = [];
+  let profTD = [];
+  for (cm of this.professeurCM) {
+    let professeurCM = await Professeur.findById(cm);
+    if (professeurCM) {
+      profCM_user = await professeurCM.getInformation();
+      let dt = {
+        _id: cm,
+        nom: profCM_user[1],
+        prenom: profCM_user[2],
+      };
+      profCM.push(dt);
+    }
+  }
+  for (TP of this.professeurTP) {
+    let professeurTP = await Professeur.findById(TP);
+    if (professeurTP) {
+      profTP_user = await professeurTP.getInformation();
+      let dt = {
+        _id: TP,
+        nom: profTP_user[1],
+        prenom: profTP_user[2],
+      };
+      profTP.push(dt);
+    }
+  }
+  for (TD of this.professeurTD) {
+    let professeurTD = await Professeur.findById(TD);
+    if (professeurTD) {
+      profTD_user = await professeurTD.getInformation();
+      let dt = {
+        _id: TD,
+        nom: profTD_user[1],
+        prenom: profTD_user[2],
+      };
+      profTD.push(dt);
+    }
+  }
+
+  return [profCM, profTP, profTD];
+};
+/* elementSchema.methods.getProfCM_ProfTP_ProfTD = async function () {
   let profCM = "ll n'y a pas";
   let profTP = "ll n'y a pas";
   let profTD = "ll n'y a pas";
@@ -100,5 +231,17 @@ elementSchema.methods.getProfCM_ProfTP_ProfTD = async function () {
   }
 
   return [profCM, profTP, profTD];
-};
+}; */
+
+/* elementSchema.methods.getSemestre_Filiere_Matiere = async function () {
+  const Matiere = require("./matiere");
+  const Semestre = require("./semestre");
+  const Filiere = require("./filiere");
+  try {
+    const matiere = await Matiere.findById(this.matiere);
+    const semestre = await Semestre.findById(this.semestre);
+    const filiere = await Filiere.findById(semestre.filiere);
+    return [semestre.numero, filiere.name, matiere.name];
+  } catch (error) {}
+}; */
 module.exports = mongoose.model("Element", elementSchema);

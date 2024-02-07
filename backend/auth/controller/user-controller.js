@@ -25,6 +25,8 @@ exports.getUsers = catchAsync(async (req, res, next) => {
 });
 /* ==================================================upload user data ======================================== */
 exports.uploadUser = catchAsync(async (req, res, next) => {
+  const fileName = req.file.filename;
+  console.log(fileName);
   res.status(200).json({
     status: "succés",
     message: "Le fichier est téléchargé avec succés",

@@ -1,13 +1,13 @@
 const express = require("express");
 
-const filliereController = require("../controller/filliere-controller");
+const filiereController = require("../controller/filiere-controller");
 const authController = require("../auth/controller/auth-controller");
 
 const router = express.Router();
 router
   .route("/")
-  .get(authController.protect, filliereController.getFillieres)
-  .post(filliereController.addFilliere);
+  .get(authController.protect, filiereController.getFilieres)
+  .post(authController.protect, filiereController.addFiliere);
 
 router.param("id", (req, res, next, val) => {
   console.log(`id de user est ${val}`);
@@ -15,16 +15,16 @@ router.param("id", (req, res, next, val) => {
 });
 router
   .route("/:id")
-  .get(filliereController.getSemestresByFiliereId)
+  .get(filiereController.getFiliereDetail)
   .delete(
     authController.protect,
     authController.restricTo("admin", "responsable"),
-    filliereController.deleteFilliere
+    filiereController.deleteFiliere
   )
   .patch(
     authController.protect,
     authController.restricTo("admin", "responsable"),
-    filliereController.updateFilliere
+    filiereController.updateFiliere
   );
 
 module.exports = router;

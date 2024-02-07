@@ -140,7 +140,7 @@ exports.addCours = catchAsync(async (req, res, next) => {
     // professeur: professeur_elm ? undefined : req.body.professeur,
     /*  matiere: req.body.matiere, */
     element: req.body.element,
-    group: req.body.group,
+    /*     group: req.body.group, */
   });
 
   res.status(201).json({

@@ -46,7 +46,7 @@ exports.uploadMatieres = catchAsync(async (req, res, next) => {
   const XLSX = require("xlsx");
   const fileName = req.file.filename;
   let message = "Le fichier est téléchargé avec succés";
-  let url = `C:/Users/HP/Desktop/gestion-PP/backend/uploads//${fileName}`;
+  let url = `C:/Users/HP/Desktop/gestion-PP/backend/uploads/${fileName}`;
   const workbook = XLSX.readFile(url, { cellDates: true });
   const sheetName = workbook.SheetNames[0];
   console.log(sheetName);
@@ -139,13 +139,13 @@ exports.getElementsByMatiereId = catchAsync(async (req, res, next) => {
   });
   for (el of elements_list) {
     let element = await Element.findById(el._id);
-    let element_info = await element.getSemestre_Filiere_Matiere();
+    let element_info = await element.getFiliere_Matiere();
     let dt = {
       _id: el._id,
       creditCM: el.creditCM,
-      semestre: element_info[0],
-      filiere: element_info[1],
-      matiere: element_info[2],
+      semestre: el.semestre,
+      filiere: element_info[0],
+      matiere: element_info[1],
     };
     elements.push(dt);
   }
@@ -165,7 +165,7 @@ exports.getProfesseursByMatiereId = catchAsync(async (req, res, next) => {
     let professeur = await Professeur.findById(x._id);
     let prof_info = await professeur.getInfo_Nbh_TH_Nbc_Somme();
     let dt = {
-      _id: prof_info[0],
+      _id: x._id,
       nom: prof_info[1],
       prenom: prof_info[2],
     };

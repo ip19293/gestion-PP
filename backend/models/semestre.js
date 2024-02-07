@@ -1,6 +1,6 @@
 const mongoose = require("mongoose");
 const Matiere = require("./matiere");
-const Filliere = require("./filliere");
+const Filliere = require("./filiere");
 
 const semestreSchema = mongoose.Schema(
   {
@@ -78,7 +78,7 @@ semestreSchema.post("findOneAndDelete", async function (semestre) {
   console.log(" semestre remove midleweere work ....................");
   const Group = require("./group");
   const Emploi = require("./emploi");
-  const Filliere = require("./filliere");
+  const Filliere = require("./filiere");
   const groups = await Group.find({ semestre: semestre._id });
   const filliere = await Filliere.findById(semestre.filliere);
   let emplois = [];
@@ -96,7 +96,7 @@ semestreSchema.post("findOneAndDelete", async function (semestre) {
 
 /* ------------------------------------------------------------------------------------------ */
 semestreSchema.methods.getNiveauAnnee = async function () {
-  const Filliere = require("./filliere");
+  const Filliere = require("./filiere");
   const filliere = await Filliere.findById(this.filliere);
   let niveau = filliere.niveau.charAt(0).toUpperCase();
   let anne = 1;

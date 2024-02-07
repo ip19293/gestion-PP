@@ -15,8 +15,8 @@ const userSchema = mongoose.Schema({
 
   mobile: {
     type: Number,
-    required: [true, "Le numéro de téléphone est reauis !"],
-    unique: true,
+    /*     required: [true, "Le numéro de téléphone est reauis !"], */
+    /*    unique: true, */
   },
   email: {
     type: String,
@@ -52,14 +52,14 @@ const userSchema = mongoose.Schema({
   },
   banque: {
     type: String,
-    required: true,
+    /*   required: true, */
     default: "BMCI",
   },
 
   accountNumero: {
     type: Number,
-    unique: true,
-    required: true,
+    /*    unique: true, */
+    /*   required: true, */
     validate: {
       validator: function (value) {
         return value.toString().length === 10;
