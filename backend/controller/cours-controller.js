@@ -20,30 +20,24 @@ exports.getCours = catchAsync(async (req, res, next) => {
     .sort()
     .limitFields()
     .pagination();
-  const cours_list = await Cours.find({});
-  let cours = [];
-  for (x of cours_list) {
-    /*     let professeur = await Professeur.findById(x.professeur);
-    let prof_info = await professeur.getInformation(); */
-    let cour = await Cours.findById(x._id);
+  const cours = await Cours.find({});
+
+  /*   
+let cours = [];
+for (let cour of cours_list) {
     let cour_info = await cour.getTHSomme();
     let elm_info = await cour.getProfesseurMatiere();
     let data = {
-      _id: x._id,
-      /*   categorie_id: matiere.categorie,
-      matiere_id: x.matiere,
-      professeur_id: x.professeur,
-      matiere: matiere.name,
-      professeur: prof_info[1] + " " + prof_info[2], */
-      date: x.date,
-      nbh: x.nbh,
-      type: x.type,
-      isSigned: x.isSigned,
-      isPaid: x.isPaid,
-      startTime: x.startTime,
-      finishTime: x.finishTime,
-      element: x.element,
-      group: x.group,
+      _id: cour._id,
+      date: cour.date,
+      nbh: cour.nbh,
+      type: cour.type,
+      isSigned: cour.isSigned,
+      isPaid: cour.isPaid,
+      startTime: cour.startTime,
+      finishTime: cour.finishTime,
+      element: cour.element,
+      group: cour.group,
       TH: cour_info[0],
       somme: cour_info[1],
       prix: cour_info[7],
@@ -54,11 +48,10 @@ exports.getCours = catchAsync(async (req, res, next) => {
       matiere: elm_info[4],
     };
     cours.push(data);
-  }
+  } */
   res.status(200).json({
     status: "succès",
     cours,
-    cours_list,
   });
 });
 
@@ -79,14 +72,15 @@ exports.getOneCours = catchAsync(async (req, res, next) => {
 
 /* ==================================================================ADD COURS======================================= */
 exports.addCours = catchAsync(async (req, res, next) => {
-  /* const professeur = await Professeur.findById(req.body.professeur);
-  const matiere = await Matiere.findById(req.body.matiere); */
-
-  /*   if (!professeur) {
+  const professeur = await Professeur.findById(req.body.professeur);
+  /*  const matiere = await Matiere.findById(req.body.matiere); */
+  if (!professeur) {
     return next(
       new AppError("Aucune enseignant trouvée avec cet identifiant !", 404)
     );
   }
+
+  /* 
   if (!matiere) {
     return next(
       new AppError("Aucune matiére trouvée avec cet identifiant !", 404)
@@ -99,8 +93,8 @@ exports.addCours = catchAsync(async (req, res, next) => {
       new AppError("Aucune element trouvée avec cet identifiant !", 404)
     );
   }
-  let type = element["professeur" + req.body.type];
-  console.log(type);
+  /*  let type = element["professeur" + req.body.type];
+   console.log(type);
   const professeur_elm = await Professeur.findById(type);
   let query = professeur_elm
     ? { element: req.body.element, date: req.body.date }
@@ -109,21 +103,24 @@ exports.addCours = catchAsync(async (req, res, next) => {
         date: req.body.date,
       };
   if (!professeur_elm) {
-    /*    const professeur = await Professeur.findById(req.body.professeur);
+       const professeur = await Professeur.findById(req.body.professeur);
     if (!professeur) {
       return next(
         new AppError("Aucune enseignant trouvée avec cet identifiant !", 404)
       );
-    } */
+    }
     return next(
       new AppError(
         `Il n'y a pas de professeur  ${req.body.type} de cette élément  !`,
         404
       )
     );
-  }
+  } */
 
-  const cours_list = await Cours.find(query);
+  const cours_list = await Cours.find({
+    professeur: req.body.professeur,
+    date: req.body.date,
+  });
   const result = VERIFICATION(req.body, cours_list, "enseignant");
 
   if (result[0] == "failed") {
@@ -137,16 +134,14 @@ exports.addCours = catchAsync(async (req, res, next) => {
     nbh: req.body.nbh,
     date: req.body.date,
     startTime: req.body.startTime,
-    // professeur: professeur_elm ? undefined : req.body.professeur,
-    /*  matiere: req.body.matiere, */
+    professeur: req.body.professeur,
     element: req.body.element,
-    /*     group: req.body.group, */
   });
 
   res.status(201).json({
     status: "succès",
     message: `Le cour est ajouté avec succés `,
-    cours,
+    // cours,
   });
 });
 /* ======================================================================EDIT COURS ============================================================== */
@@ -238,6 +233,12 @@ exports.signeCours = async (req, res, next) => {
       runValidators: true,
     }
   );
+  let professeur = await Professeur.findById(cours.professeur);
+  let cours_info = await cours.getTHSomme();
+  professeur.nbh = professeur.nbh + cours.nbh;
+  professeur.nbc = professeur.nbc + 1;
+  professeur.somme = professeur.somme + cours_info[1];
+  await professeur.save();
   res.status(200).json({
     status: "succès",
     message: "Le cours est signé avec succés .",
@@ -329,7 +330,7 @@ exports.getAllCoursProf = catchAsync(async (req, res, next) => {
       new AppError("Aucune enseignant trouvée avec cet identifiant !", 404)
     );
   }
-  let prof_info = await professeur.getInfo_Nbh_TH_Nbc_Somme(
+  let prof_info = await professeur.getNbh_TH_Nbc_Somme(
     req.body.debit,
     req.body.fin
   );
@@ -398,115 +399,39 @@ exports.getAllCoursProf = catchAsync(async (req, res, next) => {
 });
 exports.getCoursByProfesseursId = catchAsync(async (req, res, next) => {
   let id = req.params.id;
-  let cours_list = [];
-  let facture = [];
-  let cours = [];
-  let debit = new Date(req.body.debit);
-  let fin = new Date(req.body.fin);
   const professeur = await Professeur.findById(id);
   if (!professeur) {
     return next(
       new AppError("Aucune enseignant trouvée avec cet identifiant !", 404)
     );
   }
-  let prof_info = await professeur.getInfo_Nbh_TH_Nbc_Somme(
+  let prof_info = await professeur.getUserInformation(
     req.body.debit,
     req.body.fin
   );
-  let prof = {
-    _id: prof_info[0],
-    nom: prof_info[1],
-    prenom: prof_info[2],
-    email: prof_info[3],
-    mobile: prof_info[4],
-    banque: prof_info[5],
-    accountNumero: prof_info[6],
-    nbh: prof_info[7],
-    th: prof_info[8],
-    nbc: prof_info[9],
-    somme: prof_info[10],
-    firstCours: prof_info[11],
-    lastCours: prof_info[12],
-  };
-  const queryMatch =
-    req.body.debit !== undefined && req.body.fin !== undefined
-      ? {
-          $match: {
-            date: { $gte: debit, $lte: fin },
-            professeur: new mongoose.Types.ObjectId(id),
-            isSigned: "oui",
-            isPaid: "pas encore",
-          },
-        }
-      : {
-          $match: {
-            professeur: new mongoose.Types.ObjectId(id),
-            isSigned: "oui",
-            isPaid: "pas encore",
-          },
-        };
-  cours_list = await Cours.aggregate([
-    queryMatch,
-    { $group: { _id: "$element", data: { $push: "$$ROOT" } } },
-  ]).sort({ date: 1 });
-  for (x of cours_list) {
-    let element = await Element.findById(x._id);
-    let matiere = await Matiere.findById(element.matiere);
-    let matiere_info = await matiere.getCodePrixCNameCCode();
-    let nbc = x.data.length;
-    let nbh = 0;
-    let th = 0;
-    let somme = 0;
-    let prix = matiere_info[1];
-    for (y of x.data) {
-      let cour = await Cours.findById(y._id);
-      let cours_prof_matiere = await cour.getProfesseurMatiere();
-      let matiere = await Matiere.findById(cours_prof_matiere[3]);
-      let cour_info = await cour.getTHSomme();
-      nbh = nbh + cour.nbh;
-      th = th + cour_info[0];
-      somme = somme + cour_info[1];
-      let data = {
-        _id: y._id,
-        date: y.date,
-        type: y.type,
-        isSigned: y.isSigned,
-        isPaid: y.isPaid,
-        startTime: y.startTime,
-        finishTime: y.finishTime,
-        matiere_id: y.matiere,
-        professeur_id: y.professeur,
-        nbh: y.nbh,
-        categorie_id: matiere.categorie,
-        matiere: matiere.name,
-        TH: cour_info[0],
-        somme: cour_info[1],
-        matiere_prix: matiere_info[1],
-      };
-      cours.push(data);
-    }
-    let data = {
-      nbc: nbc,
-      prix: prix,
-      nbh: nbh,
-      th: th,
-      somme: somme,
-      matiere: matiere.name,
-    };
-    facture.push(data);
-  }
+  const data = await professeur.DetailNBH_TH_Nbc_Somme(
+    req.body.debit,
+    req.body.fin
+  );
+  let cours = data.cours[0].matiere;
+  let total = data.cours[0].total;
   let dt = {
-    matiere: "TOTAL",
-    nbh: prof_info[7],
-    th: prof_info[8],
-    nbc: prof_info[9],
-    somme: prof_info[10],
+    _id: {
+      matiere: "total",
+    },
+    nbh: total.length !== 0 ? total[0].NBH : 0,
+    th: total.length !== 0 ? total[0].TH : 0,
+    somme: total.length !== 0 ? total[0].SOMME : 0,
+    nbc: total.length !== 0 ? total[0].NBC : 0,
   };
-  facture.push(dt);
+  cours.push(dt);
+  let date = data.date;
   res.status(200).json({
     status: "succès",
-    facture,
-    professeur: prof,
+    dt,
+    professeur,
+    date,
     cours,
+    total,
   });
 });

@@ -1,7 +1,6 @@
 const mongoose = require("mongoose");
 const Categorie = require("./categorie");
 const Matiere = require("./matiere");
-const group = require("./group");
 const filiereSchema = mongoose.Schema({
   name: { type: String, required: true, lowercase: true },
   niveau: {
@@ -12,6 +11,10 @@ const filiereSchema = mongoose.Schema({
   description: {
     type: String,
     default: "",
+  },
+  isPaireSemestre: {
+    type: Boolean,
+    default: false,
   },
   /* 
   debutSemestrePaire: {
@@ -45,10 +48,9 @@ filiereSchema.methods.getPeriodePlace = function () {
   return [periode, place];
 };
 filiereSchema.methods.getEmplois = async function () {
-  const Group = require("./group");
-  const Semestre = require("./semestre");
+  const Semestre = require("./facture");
   const Emploi = require("./emploi");
-  const semestres = await Semestre.find({ filliere: this._id });
+  const semestres = await Semestre.find({ filiere: this._id });
   for (let semestre of semestres) {
     let groups = await Group.find({ semestre: semestre._id });
     for (let group of groups) {
@@ -56,30 +58,23 @@ filiereSchema.methods.getEmplois = async function () {
     }
   }
 };
-filiereSchema.post("findOneAndDelete", async function (filliere, message) {
-  console.log(" filliere remove midleweere work ....................");
-  const Semestre = require("./semestre");
+filiereSchema.post("findOneAndDelete", async function (filiere, message) {
+  console.log(" filiere remove midleweere work ....................");
   const Emploi = require("./emploi");
-  const Group = require("./group");
-  const semestres = await Semestre.find({ filliere: filliere._id });
+
   let groups = [];
   let emplois = [];
-  for (x of semestres) {
-    let group = await Group.deleteMany({ semestre: x._id });
-    if (group) {
-      groups.push(group);
-    }
-  }
+
   for (x of groups) {
     let emploi = await Emploi.deleteMany({ semestre: x._id });
     if (emploi) {
       emplois.push(emploi);
     }
   }
-  await Semestre.deleteMany({ filliere: filliere._id });
-  message = `La filière ${filliere.niveau} ${filliere.name} avec  ${semestres.length} semestres, ${groups.length} groups et ${emplois.length} cours d'emploi du temps est supprimé !`;
-  filliere.name = message;
+
+  message = `La filière ${filiere.niveau} ${filiere.name} avec  ${semestres.length} semestres, ${groups.length} groups et ${emplois.length} cours d'emploi du temps est supprimé !`;
+  filiere.name = message;
   console.log(message);
 });
 
-module.exports = mongoose.model("Filliere", filiereSchema);
+module.exports = mongoose.model("Filiere", filiereSchema);

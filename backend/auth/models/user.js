@@ -7,10 +7,12 @@ const userSchema = mongoose.Schema({
   nom: {
     type: String,
     required: [true, "Le nom est requis !"],
+    lowercase: true,
   },
   prenom: {
     type: String,
     required: [true, "Le prenom est requis !"],
+    lowercase: true,
   },
 
   mobile: {
@@ -77,6 +79,20 @@ const userSchema = mongoose.Schema({
   },
 });
 
+userSchema.pre("save", async function (next) {
+  const Professeur = require("../../models/professeur");
+  const professeur = await Professeur.findOne({ user: this._id });
+  if (professeur) {
+    professeur.info[0] = this.nom + " " + this.prenom;
+    professeur.info[1] = this.email;
+    professeur.info[2] = this.mobile;
+    professeur.info[3] = this.banque;
+    professeur.info[4] = this.accountNumero;
+    await professeur.save();
+  }
+
+  next();
+});
 userSchema.pre("save", function (next) {
   if (!this.isModified("password") || this.isNew) return next();
   this.passwordChangedAt = Date.now() - 1000;

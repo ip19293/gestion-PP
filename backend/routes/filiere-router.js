@@ -26,5 +26,12 @@ router
     authController.restricTo("admin", "responsable"),
     filiereController.updateFiliere
   );
+router
+  .route("/:id/emplois")
+  .get(
+    authController.protect,
+    authController.restricTo("admin", "responsable"),
+    filiereController.getFiliereEmplois
+  );
 
 module.exports = router;

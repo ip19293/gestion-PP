@@ -35,6 +35,7 @@ const elementSchema = mongoose.Schema({
       },
     },
   },
+
   matiere: {
     type: mongoose.Schema.ObjectId,
     ref: "Matiere",
@@ -62,6 +63,18 @@ const elementSchema = mongoose.Schema({
       ref: "Professeur",
     },
   ],
+  name: { type: String, lowercase: true },
+
+  info: {
+    code: String,
+    categorie: {
+      type: mongoose.Schema.ObjectId,
+      ref: "Categorie",
+    },
+    CM: [String],
+    TD: [String],
+    TP: [String],
+  },
 });
 /* elementSchema.pre("validate", async function (next) {
   try {
@@ -83,6 +96,19 @@ const elementSchema = mongoose.Schema({
   next();
 }); */
 elementSchema.pre("save", async function (next) {
+  const Matiere = require("./matiere");
+  const Filiere = require("./filiere");
+  const matiere = await Matiere.findById(this.matiere);
+  const filiere = await Filiere.findById(this.filiere);
+  let matiere_info = await matiere.getCodePrixCNameCCode();
+  let filiere_info = await filiere.getPeriodePlace();
+  let code = matiere_info[3] + this.semestre + filiere_info[1] + matiere.numero;
+  this.info.code = code;
+  this.name = matiere.name;
+  this.info.categorie = matiere.categorie;
+  let professeursCM_List = [];
+  let professeursTP_List = [];
+  let professeursTD_List = [];
   const unqRef = [...new Set(this.professeurCM.map(String))];
   const unqRefTP = [...new Set(this.professeurTP.map(String))];
   const unqRefTD = [...new Set(this.professeurTD.map(String))];
@@ -104,6 +130,8 @@ elementSchema.pre("save", async function (next) {
           throw new Error(
             `Aucun document reference trouvé pour cet identifiant: ${el} !`
           );
+        } else {
+          professeursCM_List.push(refDoc.nom + " " + refDoc.prenom);
         }
         return refDoc;
       })
@@ -115,6 +143,8 @@ elementSchema.pre("save", async function (next) {
           throw new Error(
             `Aucun document reference trouvé pour cet identifiant: ${el} !`
           );
+        } else {
+          professeursTD_List.push(refDoc.nom + " " + refDoc.prenom);
         }
         return refDoc;
       })
@@ -126,10 +156,16 @@ elementSchema.pre("save", async function (next) {
           throw new Error(
             `Aucun document reference trouvé pour cet identifiant: ${el} !`
           );
+        } else {
+          professeursTP_List.push(refDoc.nom + " " + refDoc.prenom);
         }
         return refDoc;
       })
     );
+
+    this.info.CM = professeursCM_List;
+    this.info.TD = professeursTD_List;
+    this.info.TP = professeursTP_List;
     next();
   } catch (error) {
     next(error);
@@ -143,7 +179,15 @@ elementSchema.post("findOneAndDelete", async function (element) {
   await Cours.deleteMany({ element: element._id });
   await Emploi.deleteMany({ element: element._id });
 });
-
+/* -------------------------------------------------------------GET PRIX---------------------------- */
+elementSchema.methods.getPrix = async function () {
+  const Matiere = require("./matiere");
+  const matiere = await Matiere.findById(this.matiere);
+  let matiere_info = await matiere.getCodePrixCNameCCode();
+  let prix = await matiere_info[1];
+  return prix;
+};
+/* -----------------------------------------------------------GET Filiere Matiere--------------------------- */
 elementSchema.methods.getFiliere_Matiere = async function () {
   const Matiere = require("./matiere");
   const Filiere = require("./filiere");
@@ -153,6 +197,7 @@ elementSchema.methods.getFiliere_Matiere = async function () {
     return [filiere, matiere];
   } catch (error) {}
 };
+/* --------------------------------------------------------GET PROFESSEURS--------------------------------------- */
 elementSchema.methods.getProfCM_ProfTP_ProfTD = async function () {
   const Professeur = require("./professeur");
   let profCM = [];
@@ -161,11 +206,11 @@ elementSchema.methods.getProfCM_ProfTP_ProfTD = async function () {
   for (cm of this.professeurCM) {
     let professeurCM = await Professeur.findById(cm);
     if (professeurCM) {
-      profCM_user = await professeurCM.getInformation();
+      profCM_user = await professeurCM.getUserInformation();
       let dt = {
         _id: cm,
-        nom: profCM_user[1],
-        prenom: profCM_user[2],
+        nom: profCM_user.nom,
+        prenom: profCM_user.prenom,
       };
       profCM.push(dt);
     }

@@ -31,20 +31,24 @@ const emploiSchema = mongoose.Schema({
     select: true,
     enum: [0, 1, 2, 3, 4, 5, 6],
   },
-  group: {
+  filiere: {
     type: mongoose.Schema.ObjectId,
-    ref: "Group",
-    required: [true, "le group est requis !"],
+    ref: "Filiere",
   },
   professeur: {
     type: mongoose.Schema.ObjectId,
     ref: "Professeur",
+    required: [true, "professeur est requis !"],
   },
   element: {
     type: mongoose.Schema.ObjectId,
     ref: "Element",
     required: [true, "élément est requis !"],
   },
+  jour: String,
+  enseignat: String,
+  matiere: String,
+  semestre: Number,
 });
 /* ===================================================================== validate midelwere ======================== */
 /* emploiSchema.pre("validate", async function (next) {
@@ -75,10 +79,12 @@ const emploiSchema = mongoose.Schema({
 /* ===================================================================== save  midelwere ======================== */
 emploiSchema.pre("save", async function (next) {
   const element = await Element.findById(this.element);
+  const professeur = await Professeur.findById(this.professeur);
   console.log(element);
   let type = element["professeur" + this.type];
-  let professeur = await Professeur.findById(type);
-  this.professeur = professeur._id;
+  /*   let professeur = await Professeur.findById(type);
+  this.professeur = professeur._id; */
+  this.filiere = element.filiere;
   const input = this.startTime.split(":");
   let hour = parseInt(input[0]);
   let minute = parseInt(input[1]);
@@ -94,7 +100,25 @@ emploiSchema.pre("save", async function (next) {
     finishtime = fnshDate.getHours() + ":" + fnshDate.getMinutes();
   }
   this.finishTime = finishtime;
-
+  /* ----------------------------------------------------------------------- */
+  /*    let professeurs = element["professeur" + this.type];
+   let prof = professeurs.find((el) =>
+     el.equals(new mongoose.Types.ObjectId(this.professeur))
+   );
+ */
+  let daysOfWeek = [
+    "Dimanche",
+    "Lundi",
+    "Mardi",
+    "Mercredi",
+    "Jeudi",
+    "Vendredi",
+    "Samedi",
+  ];
+  this.semestre = element.semestre;
+  this.jour = daysOfWeek[this.dayNumero];
+  this.enseignat = professeur.nom + " " + professeur.prenom;
+  this.matiere = element.name;
   next();
 });
 
@@ -150,4 +174,13 @@ emploiSchema.methods.getGName_SNum_SId_FId_FName_FNiveau_NiveauAnnee =
     }
     return info;
   };
+/* -------------------------------------------------------------------Get Emplois Professeurs ------------------ */
+emploiSchema.methods.getEmploiProfesseurs = async function () {
+  const element = await Element.findById(this.element);
+
+  let professeurs = element["professeur" + this.type];
+
+  // console.log(professeurs);
+  return professeurs;
+};
 module.exports = mongoose.model("Emploi", emploiSchema);

@@ -1,6 +1,4 @@
 const APIFeatures = require("../utils/apiFeatures");
-const Semestre = require("../models/semestre");
-const Group = require("../models/group");
 const Professeur = require("../models/professeur");
 const Matiere = require("../models/matiere");
 const Emploi = require("../models/emploi");

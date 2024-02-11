@@ -1,5 +1,4 @@
 const mongoose = require("mongoose");
-const professeur = require("./professeur");
 const schema = mongoose.Schema;
 const AppError = require("../utils/appError");
 const categorieSchema = mongoose.Schema(
@@ -73,7 +72,7 @@ categorieSchema.post("findOneAndDelete", async function (categorie, message) {
   console.log(" categorie remove midleweere work ....................");
   const Matiere = require("./matiere");
   const Professeur = require("./professeur");
-  const Semestre = require("./semestre");
+  const Semestre = require("./facture");
   const Cours = require("./cours");
   const Emploi = require("./emploi");
   const matieres = await Matiere.find({ categorie: categorie._id });

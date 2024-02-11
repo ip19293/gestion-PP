@@ -5,7 +5,6 @@ const Element = require("../models/element");
 const catchAsync = require("../utils/catchAsync");
 const AppError = require("../utils/appError");
 const Categorie = require("../models/categorie");
-const semestre = require("../models/semestre");
 exports.getMatieres = catchAsync(async (req, res, next) => {
   let filter = {};
   if (req.params.id) filter = { cours: req.params.id };

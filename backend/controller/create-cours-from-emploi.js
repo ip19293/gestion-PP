@@ -1,6 +1,4 @@
 const APIFeatures = require("../utils/apiFeatures");
-const Semestre = require("../models/semestre");
-const Group = require("../models/group");
 const Professeur = require("../models/professeur");
 const Matiere = require("../models/matiere");
 const Emploi = require("../models/emploi");
@@ -43,20 +41,21 @@ const createCoursFromGroupEmplois = async () => {
     if (result[0] == "failed") {
       console.log(result[0]);
     } else {
-      const cours = await Cours.create({
-        type: x.type,
-        date: date,
-        startTime: x.startTime,
-        professeur: x.professeur,
-        matiere: x.matiere,
-      });
-      added_cours.push(cours);
+      try {
+        const cours = await Cours.create({
+          type: x.type,
+          date: date,
+          startTime: x.startTime,
+          professeur: x.professeur,
+          element: x.element,
+        });
+        added_cours.push(cours);
+      } catch (error) {}
     }
   }
   result.today_emplois = emplois;
   result.today_cours = list_cours_day;
   result.added_cours = added_cours;
-
   return result;
 };
 const auto = async () => {

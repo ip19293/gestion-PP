@@ -1,13 +1,11 @@
 const APIFeatures = require("../utils/apiFeatures");
 const Element = require("../models/element");
-const Group = require("../models/group");
 const catchAsync = require("../utils/catchAsync");
 const AppError = require("../utils/appError");
 const Professeur = require("../models/professeur");
 const Matiere = require("../models/matiere");
 const Filiere = require("../models/filiere");
 const User = require("../auth/models/user");
-const semestre = require("../models/semestre");
 exports.getElements = catchAsync(async (req, res, next) => {
   let filter = {};
   if (req.params.id) filter = { cours: req.params.id };
@@ -77,13 +75,25 @@ exports.addElement = catchAsync(async (req, res, next) => {
   if (OldElement) {
     return next(new AppError("L'element existe déja !", 404));
   }
+  let TD =
+    req.body.professeurTD === undefined || req.body.professeurTD === ""
+      ? undefined
+      : req.body.professeurTD;
+  let CM =
+    req.body.professeurCM === undefined || req.body.professeurCM === ""
+      ? undefined
+      : req.body.professeurCM;
+  let TP =
+    req.body.professeurTP === undefined || req.body.professeurTP === ""
+      ? undefined
+      : req.body.professeurTP;
   const element = await Element.create({
     matiere: req.body.matiere,
     semestre: req.body.semestre,
     filiere: req.body.filiere,
-    professeurCM: req.body.professeurCM,
-    professeurTD: req.body.professeurTD,
-    professeurTP: req.body.professeurTP,
+    professeurCM: CM,
+    professeurTD: TD,
+    professeurTP: TP,
     heuresCM: req.body.heuresCM,
     heuresTP: req.body.heuresTP,
     heuresTD: req.body.heuresTD,
@@ -98,12 +108,12 @@ exports.addElement = catchAsync(async (req, res, next) => {
 exports.updateElement = catchAsync(async (req, res, next) => {
   const id = req.params.id;
   const element = await Element.findById(id);
+  const matiere = await Matiere.findById(req.body.matiere);
   if (!element) {
     return next(
       new AppError("Aucune element trouvée avec cet identifiant !", 404)
     );
   }
-  const matiere = await Matiere.findById(req.body.matiere);
 
   if (!matiere) {
     return next(
@@ -163,6 +173,7 @@ exports.deleteElement = catchAsync(async (req, res, next) => {
 exports.getElement = catchAsync(async (req, res, next) => {
   const id = req.params.id;
   const element = await Element.findById(id);
+  let prix = await element.getPrix();
   if (!element) {
     return next(
       new AppError("Aucune matière trouvée avec cet identifiant !", 404)
@@ -170,7 +181,8 @@ exports.getElement = catchAsync(async (req, res, next) => {
   }
   res.status(200).json({
     status: "succés",
-    element: element,
+    //element: element,
+    prix,
   });
 });
 exports.getGroupsByElementId = catchAsync(async (req, res, next) => {
@@ -261,7 +273,6 @@ exports.uploadElements = catchAsync(async (req, res, next) => {
       console.log(x[1]);
       if (x.length === 2) {
         numero = parseInt(x[1].match(/\d+/)[0]);
-        console.log(numero + ":semestre------------------------");
       }
     } else {
       const matiere = await Matiere.findOne({ name: x[1] });
@@ -291,20 +302,19 @@ exports.uploadElements = catchAsync(async (req, res, next) => {
           }
         }
       }
-
       if (matiere && !element) {
-        let dt = {
-          matiere: matiere._id,
-          semestre: numero,
-          filiere: filiere._id,
-          professeurCM: professeurs_Total[0],
-          professeurTD: professeurs_Total[1],
-          professeurTP: professeurs_Total[2],
-        };
         try {
+          let dt = {
+            matiere: matiere._id,
+            semestre: numero,
+            filiere: filiere._id,
+            professeurCM: professeurs_Total[0],
+            professeurTD: professeurs_Total[1],
+            professeurTP: professeurs_Total[2],
+          };
+
           const element = await Element.create(dt);
-          console.log(element._id);
-          //console.log(dt);
+          console.log(dt);
         } catch (error) {}
       } else {
         console.log("NOT EXISTING MATIERE  --------------------------");

@@ -51,7 +51,7 @@ matiereSchema.post("findOneAndDelete", async function (matiere) {
   console.log(" matiere remove midleweere work ....................");
   const Cours = require("./cours");
   const Professeur = require("./professeur");
-  const Semestre = require("./semestre");
+  const Semestre = require("./facture");
   const Emploi = require("./emploi");
   let message = `La matière supprimée avec succès de tous les semestres elements,cours,emplois et enseignants liste des matières .`;
 

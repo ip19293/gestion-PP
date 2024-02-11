@@ -1,5 +1,5 @@
 const mongoose = require("mongoose");
-
+const Professeur = require("../models/professeur");
 const paiementSchema = mongoose.Schema(
   {
     date: {
@@ -48,6 +48,7 @@ const paiementSchema = mongoose.Schema(
       default: "vide",
       enum: ["vide", "accepté", "refusé"],
     },
+    enseignant: String,
   },
   { timestamps: true },
   {
@@ -73,6 +74,18 @@ paiementSchema.pre("validate", async function (next) {
     next(error);
   }
 });
+paiementSchema.pre("save", async function (next) {
+  const professeur = await Professeur.findById(this.professeur);
+
+  this.enseignant = professeur.nom + " " + professeur.prenom;
+});
+/* ===========================================================================================METHODS ========================= */
+
+paiementSchema.methods.getDetail = async function () {
+  const professeur = await Professeur.findById(this.professeur);
+  let debit = new Date(req.body.debit);
+  let fin = new Date(req.body.fin);
+};
 paiementSchema.methods.setConfirmation = function (value) {
   this.confirmation = value;
 };

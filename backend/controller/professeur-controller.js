@@ -14,13 +14,11 @@ exports.getProfesseurs = catchAsync(async (req, res, next) => {
     .sort()
     .limitFields()
     .pagination();
-  const professeurs_list = await features.query;
-  let professeurs = [];
-  for (let x of professeurs_list) {
-    // let user = await User.findOne({ _id: x.user });
+  const professeurs = await features.query;
+
+  /* for (let x of professeurs_list) {
     let prof_info = await x.getInfo_Nbh_TH_Nbc_Somme();
     if (prof_info[0]) {
-      // console.log(prof_info[0].nom);
       let data = {
         _id: x._id,
         nom: prof_info[1],
@@ -36,7 +34,7 @@ exports.getProfesseurs = catchAsync(async (req, res, next) => {
       };
       professeurs.push(data);
     }
-  }
+  } */
 
   res.status(200).json({
     status: "succés",
@@ -151,14 +149,14 @@ exports.getProfCours = catchAsync(async (req, res, next) => {
 exports.getProfCoursSigned = catchAsync(async (req, res, next) => {
   const id = req.params.id;
   const professeur = await Professeur.findById(id);
-  let prof_info = await professeur.getInfo_Nbh_TH_Nbc_Somme();
+
   if (!professeur) {
     return next(
       new AppError("Aucun enseignant trouvé avec cet identifiant !", 404)
     );
   }
-
-  const cours_lsit = await Cours.find({ professeur: id, isSigned: "oui" });
+  const cours = await Cours.find({ professeur: id, isSigned: "oui" });
+  /*  const cours_lsit = await Cours.find({ professeur: id, isSigned: "oui" });
   let cours = [];
   for (x of cours_lsit) {
     let matiere = await Matiere.findById(x.matiere);
@@ -185,7 +183,7 @@ exports.getProfCoursSigned = catchAsync(async (req, res, next) => {
       finishTime: x.finishTime,
     };
     cours.push(data);
-  }
+  } */
   res.status(200).json({
     status: "succés",
     cours,
@@ -194,17 +192,17 @@ exports.getProfCoursSigned = catchAsync(async (req, res, next) => {
 exports.getProfCoursNon = catchAsync(async (req, res, next) => {
   const id = req.params.id;
   const professeur = await Professeur.findById(id);
-  let prof_info = await professeur.getInfo_Nbh_TH_Nbc_Somme();
+  /*   let prof_info = await professeur.getNbh_TH_Nbc_Somme(); */
   if (!professeur) {
     return next(
       new AppError("Aucun enseignant trouvé avec cet identifiant !", 404)
     );
   }
-  const cours_lsit = await Cours.find({
+  const cours = await Cours.find({
     professeur: id,
     isSigned: "pas encore",
   });
-  let cours = [];
+  /*   let cours = [];
   for (x of cours_lsit) {
     let matiere = await Matiere.findById(x.matiere);
     let cour = await Cours.findById(x._id);
@@ -231,7 +229,7 @@ exports.getProfCoursNon = catchAsync(async (req, res, next) => {
     };
     cours.push(data);
   }
-
+ */
   res.status(200).json({
     status: "succés",
     cours,
@@ -247,12 +245,14 @@ exports.getProfesseurById = catchAsync(async (req, res, next) => {
       new AppError("Aucun enseignant trouvé avec cet identifiant !", 404)
     );
   }
-  const prof_info = await Oldprofesseur.getInformation();
+  const prof_info = await Oldprofesseur.getUserInformation();
   if (!prof_info) {
     return next(new AppError("Le donnée de cet enseignant est vide !", 404));
   }
   let matieres = await Oldprofesseur.getMatieres();
-
+  let prof_cours_detail = await Oldprofesseur.DetailNBH_TH_Nbc_Somme();
+  /*   "2024-02-20T13:36:43.076Z",
+    "2024-02-21T13:36:43.076Z" */
   const professeur = {
     _id: Oldprofesseur._id,
     nom: prof_info[1],
@@ -261,7 +261,7 @@ exports.getProfesseurById = catchAsync(async (req, res, next) => {
   };
   res.status(200).json({
     status: "succés",
-    professeur,
+    prof_cours_detail,
     matieres: matieres,
   });
 });
@@ -384,15 +384,9 @@ exports.uploadProfesseurs = catchAsync(async (req, res, next) => {
   // Extract data from the first two columns
   const columnData = XLSX.utils.sheet_to_json(emploiName, {
     header: 1,
-    /*  range: "B1:E1:F1" + emploiName["!ref"].split(":")[1].replace(/\D/g, ""), */
   });
   const finalJsonData = columnData.filter((row) => row.length > 0);
-  //const categoris = await Categorie.find();
 
-  /*   if (
-    ["code", "CodeEM", "Code"].includes(finalJsonData[1][0]) &&
-    ["nom", "Titre", "nom de la matiere"].includes(finalJsonData[1][1])
-  ) { */
   for (const [index, x] of finalJsonData.entries()) {
     if (x[0] == null || x[0] === "code" || x[0] === "CodeEM") {
       console.log(x[1]);
@@ -401,9 +395,6 @@ exports.uploadProfesseurs = catchAsync(async (req, res, next) => {
         let value = x[z].replace("/ ", "/");
         let professeursCM = value.split("/");
         const matiere = await Matiere.findOne({ name: x[1] });
-
-        // console.log(matiere + "------------------------------------");
-        /*  professeursCM = professeursCM.filter((el) => el !== " "); */
         for (prof of professeursCM) {
           let professeur = prof.split(" ");
           let famille = professeur[2] != undefined ? "." + professeur[2] : "";
@@ -414,7 +405,76 @@ exports.uploadProfesseurs = catchAsync(async (req, res, next) => {
                 `${famille}` +
                 "@supnum.mr"
               : professeur[0] + `.${professeur[0]}` + "@supnum.mr";
-          const OldUser = await User.findOne({ email: email });
+          email = email.toLowerCase();
+
+          const Olduser = await User.findOne({ email: email });
+          if (Olduser) {
+            const Oldprofesseur = await Professeur.findOne({
+              user: Olduser._id,
+            });
+            if (!Oldprofesseur) {
+              const professeur = await Professeur.create({
+                user: Olduser._id,
+                matieres: matiere._id,
+              });
+            } else {
+              await Professeur.updateOne(
+                {
+                  _id: Oldprofesseur._id,
+                },
+                {
+                  $addToSet: {
+                    matieres: matiere._id,
+                  },
+                }
+              );
+            }
+
+            /*    console.log("Matiere  existe --------------------------");
+              console.log("prof existing ...................."); */
+          } else {
+            let dt = {
+              nom: professeur[0],
+              prenom:
+                professeur[1] != undefined
+                  ? professeur[1] + " " + famille
+                  : professeur[0],
+              email: email,
+              password: "1234@supnum",
+              passwordConfirm: "1234@supnum",
+            };
+            try {
+              const user = await User.create(dt);
+              const professeur = await Professeur.create({
+                user: user._id,
+                matieres: matiere._id,
+              });
+            } catch (error) {}
+          }
+        }
+      }
+    }
+  }
+  /* 
+  for (const [index, x] of finalJsonData.entries()) {
+    if (x[0] == null || x[0] === "code" || x[0] === "CodeEM") {
+      console.log(x[1]);
+    } else {
+      for (let z = 4; z < 7; z++) {
+        let value = x[z].replace("/ ", "/");
+        let professeursCM = value.split("/");
+        const matiere = await Matiere.findOne({ name: x[1] });
+        for (prof of professeursCM) {
+          let professeur = prof.split(" ");
+          let famille = professeur[2] != undefined ? "." + professeur[2] : "";
+          let email =
+            professeur[1] != undefined
+              ? professeur[0] +
+                `.${professeur[1]}` +
+                `${famille}` +
+                "@supnum.mr"
+              : professeur[0] + `.${professeur[0]}` + "@supnum.mr";
+         const OldUser = await User.findOne({ email: email });
           if (OldUser && OldUser.role === "professeur") {
             let Oldprofesseur = await Professeur.findOne({ user: OldUser._id });
             if (Oldprofesseur) {
@@ -452,30 +512,15 @@ exports.uploadProfesseurs = catchAsync(async (req, res, next) => {
                   user: user._id,
                   matieres: matiere._id,
                 });
-                /*      if (professeur) {
-              if (matiere) {
-                await Professeur.updateMany(
-                  {
-                    _id: professeur._id,
-                  },
-                  {
-                    $addToSet: {
-                      matieres: matiere._id,
-                    },
-                  }
-                );
-              } else {
-                console.log("Matiere not existe --------------------------");
+               
               }
-            } */
-              }
-              //   console.log(dt);
+          
             } catch (error) {}
           }
         }
       }
     }
-  }
+  } */
 
   res.status(200).json({
     status: "succés",

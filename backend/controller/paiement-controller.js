@@ -15,9 +15,9 @@ const filterOb = (obj, ...allowedFields) => {
 /*  1)============================= get All paiement ======================================================*/
 exports.getPaiements = catchAsync(async (req, res, next) => {
   const features = new APIFeatures(Paiement.find(), req.query);
-  const paiements_list = await features.query;
-  let paiements = [];
-  for (elem of paiements_list) {
+  const paiements = await features.query;
+
+  /* for (elem of paiements_list) {
     let professeur = await Professeur.findById(elem.professeur);
     let prof_info = await professeur.getInfo_Nbh_TH_Nbc_Somme();
     let data = {
@@ -39,7 +39,7 @@ exports.getPaiements = catchAsync(async (req, res, next) => {
       accountNumero: prof_info[5],
     };
     paiements.push(data);
-  }
+  } */
   res.status(200).json({
     status: "success",
     paiements,

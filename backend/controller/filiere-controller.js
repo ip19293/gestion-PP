@@ -3,7 +3,7 @@ const Filiere = require("../models/filiere");
 const Element = require("../models/element");
 const catchAsync = require("../utils/catchAsync");
 const AppError = require("../utils/appError");
-const Semestre = require("../models/semestre");
+const Emploi = require("../models/emploi");
 const Matiere = require("../models/matiere");
 
 exports.getFilieres = catchAsync(async (req, res, next) => {
@@ -75,6 +75,7 @@ exports.updateFiliere = catchAsync(async (req, res, next) => {
   filiere.name = req.body.name;
   filiere.niveau = req.body.niveau;
   filiere.description = req.body.description;
+  filiere.isPaireSemestre = req.body.isPaireSemestre;
   await filiere.save();
   if (!filiere) {
     return next(
@@ -117,41 +118,21 @@ exports.getFiliere = catchAsync(async (req, res, next) => {
     filiere,
   });
 });
-/* ====================================================== GET SEMESTRES BY FILIERE ID =====================*/
-exports.getSemestresByFiliereId = catchAsync(async (req, res, next) => {
-  const id = req.params.id;
-  const filiere = await Filiere.findById(id);
-  if (!filiere) {
-    return next(
-      new AppError("La filière avec cet identifiant introuvable !", 404)
-    );
-  }
-  const semestres = await Semestre.find({ filiere: id });
-  res.status(200).json({
-    status: "succès",
-    _id: filiere._id,
-    filiere: filiere.name,
-    description: filiere.description,
-    niveau: filiere.niveau,
-    semestres: semestres,
-  });
-});
+
 /* ====================================================GET DETAIL LIST OF SEMESTRES========================== */
 exports.getFiliereDetail = catchAsync(async (req, res, next) => {
   const id = req.params.id;
   const filiere = await Filiere.findById(id);
-  let list_semestres = [];
-  let elements = [];
   if (!filiere) {
     return next(
       new AppError("La filière avec cet identifiant introuvable !", 404)
     );
   }
-  const list_elements = await Element.find({ filiere: id }).sort({
+  const elements = await Element.find({ filiere: id }).sort({
     semestre: 1,
   });
   let filiere_info = await filiere.getPeriodePlace();
-  for (elem of list_elements) {
+  /*  for (elem of list_elements) {
     let elem_info = await elem.getFiliere_Matiere();
     let elem_profs = await elem.getProfCM_ProfTP_ProfTD();
     let matiere_info = await elem_info[1].getCodePrixCNameCCode();
@@ -174,7 +155,7 @@ exports.getFiliereDetail = catchAsync(async (req, res, next) => {
       professeurTD: elem_profs[2],
     };
     elements.push(dt);
-  }
+  } */
   /*   const semestres = await Semestre.find({ filiere: id });
   for (s of semestres) {
     if (s.numero != null) {
@@ -193,7 +174,39 @@ exports.getFiliereDetail = catchAsync(async (req, res, next) => {
     elements: elements,
   });
 });
-
+exports.getFiliereEmplois = catchAsync(async (req, res, next) => {
+  const id = req.params.id;
+  const filiere = await Filiere.findById(id);
+  if (!filiere) {
+    return next(
+      new AppError("La filière avec cet identifiant introuvable !", 404)
+    );
+  }
+  let nb_semestres = (await filiere.getPeriodePlace()[0]) * 2;
+  let emplois = [];
+  if (filiere.isPaireSemestre) {
+    for (let x = 2; x <= nb_semestres; x = x + 2) {
+      let semestre_emplois = await Emploi.find({ filiere: id, semestre: x });
+      emplois.push(semestre_emplois);
+    }
+  } else {
+    for (let x = 1; x <= nb_semestres; x = x + 2) {
+      let semestre_emplois = await Emploi.find({ filiere: id, semestre: x });
+      emplois.push(semestre_emplois);
+    }
+  }
+  res.status(200).json({
+    status: "succès",
+    _id: filiere._id,
+    filiere: filiere.name,
+    description: filiere.description,
+    niveau: filiere.niveau,
+    // ems,
+    //semestres: list_semestres,
+    // elements: data,
+    emplois: emplois,
+  });
+});
 /* -----------------------------------------------------------FUNCTIONS----------------------- */
 /* 1) GET SEMESTRE WITH ELEMENTS  ----------------------------*/
 /* async function getFilliereSemestresElements(semestres, filliere) {

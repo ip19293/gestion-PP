@@ -16,11 +16,17 @@ const coursSchema = mongoose.Schema(
       min: 0,
       max: 3,
     },
+    th: {
+      type: Number,
+    },
+    somme: {
+      type: Number,
+    },
+
     date: {
       type: Date,
       required: [true, "Date est requis !"],
     },
-
     startTime: {
       type: String,
       select: true,
@@ -33,21 +39,20 @@ const coursSchema = mongoose.Schema(
     professeur: {
       type: mongoose.Schema.ObjectId,
       ref: "Professeur",
+      required: [true, "professeur est requis"],
     },
-    matiere: {
+    /*    matiere: {
       type: mongoose.Schema.ObjectId,
       ref: "Matiere",
-    },
+    }, */
     element: {
       type: mongoose.Schema.ObjectId,
       ref: "Element",
       required: [true, "element est requis"],
     },
-    /*    group: {
-      type: mongoose.Schema.ObjectId,
-      ref: "Group",
-      required: [true, "le group est requis !"],
-    }, */
+    matiere: String,
+    enseignant: String,
+    prix: Number,
     isSigned: {
       type: String,
       default: "pas encore",
@@ -66,8 +71,25 @@ const coursSchema = mongoose.Schema(
   }
 );
 /* =====================================================================MIDLWERE */
-/* coursSchema.pre("validate", async function (next) {
+coursSchema.pre("validate", async function (next) {
+  const Element = require("./element");
   try {
+    /* ----------------------------------------------verification de element professeur by type before create-------------------------- */
+    const element = await Element.findById(this.element);
+    const professeur = await Professeur.findById(this.professeur);
+    let professeurs = element["professeur" + this.type];
+    let prof = professeurs.find((el) =>
+      el.equals(new mongoose.Types.ObjectId(professeur._id))
+    );
+    if (!prof) {
+      return next(
+        new AppError(
+          `Ce professeur  ne fait pas partie des professeurs de ${this.type}  pour  l'elément !`,
+          404
+        )
+      );
+    }
+
     if (this.nbh > 3) {
       return next(
         new AppError("Un cours ne peut pas durer plus de trois heures !", 404)
@@ -88,15 +110,13 @@ const coursSchema = mongoose.Schema(
     //next(error);
   }
   next();
-}); */
+});
 coursSchema.pre("save", async function (next) {
   const Element = require("./element");
   const element = await Element.findById(this.element);
-  let type = element["professeur" + this.type];
-  let professeur = await Professeur.findById(type);
-  let matiere = await Matiere.findById(element.matiere);
-  this.matiere = matiere._id;
-  this.professeur = professeur._id;
+  const professeur = await Professeur.findById(this.professeur);
+  this.enseignant = professeur.nom + " " + professeur.prenom;
+  this.matiere = element.name;
   const input = this.startTime.split(":");
   let hour = parseInt(input[0]);
   let minute = parseInt(input[1]);
@@ -113,15 +133,40 @@ coursSchema.pre("save", async function (next) {
   }
   this.finishTime = finishtime;
 
+  let tauxHoreure = 0;
+  if (this.type == "CM") {
+    tauxHoreure = this.nbh;
+  } else {
+    tauxHoreure = (this.nbh * 2) / 3;
+  }
+  let prix = await element.getPrix();
+  let sommeUM = tauxHoreure * prix;
+  this.prix = prix;
+  this.th = tauxHoreure;
+  this.somme = sommeUM;
   next();
+});
+/*-------------------------------------------------DELETE findOneAndDelete ------------------------------------------ */
+
+coursSchema.post("findOneAndDelete", async function (cours) {
+  console.log(" cours remove midleweere work ....................");
+  if (cours.isSigned === "oui") {
+    const Professeur = require("./professeur");
+    let professeur = await Professeur.findById(cours.professeur);
+    let cours_info = await cours.getTHSomme();
+    professeur.nbh = professeur.nbh - cours.nbh;
+    professeur.nbc = professeur.nbc - 1;
+    professeur.somme = professeur.somme - cours_info[1];
+    await professeur.save();
+  } /*  else {
+    console.log(" Not Signed cours deleted");
+  } */
 });
 /* =====================================================================METHODS============================== */
 coursSchema.methods.getTHSomme = async function () {
   const Element = require("./element");
-  const Matiere = require("./matiere");
   try {
     const element = await Element.findById(this.element);
-    const matiere = await Matiere.findById(element.matiere);
     let tauxHoreure = 0;
     if (this.type == "CM") {
       tauxHoreure = this.nbh;
@@ -129,27 +174,20 @@ coursSchema.methods.getTHSomme = async function () {
       tauxHoreure = (this.nbh * 2) / 3;
     }
 
-    let matiere_info = await matiere.getCodePrixCNameCCode();
-    let sommeUM = tauxHoreure * matiere_info[1];
+    let prix = await element.getPrix();
+    let sommeUM = tauxHoreure * prix;
     return [tauxHoreure, sommeUM];
   } catch (error) {
     console.log(error);
   }
 };
 coursSchema.methods.getProfesseurMatiere = async function () {
-  const Element = require("./element");
+  /*   const Element = require("./element");
   const element = await Element.findById(this.element);
-  let type = element["professeur" + this.type];
-  let professeur = await Professeur.findById(type);
-  let prof_info = await professeur.getInformation();
-  const matiere = await Matiere.findById(element.matiere);
-  let res = [
-    prof_info[0],
-    prof_info[1],
-    prof_info[2],
-    matiere._id,
-    matiere.name,
-  ];
+  let type = element["professeur" + this.type]; */
+  let professeur = await Professeur.findById(this.professeur);
+  let prof_info = await professeur.getUserInformation();
+  let res = [prof_info.nom, prof_info.prenom, matiere._id, matiere.name];
 
   return res;
 };

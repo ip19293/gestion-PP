@@ -117,27 +117,42 @@ exports.updateUser = catchAsync(async (req, res, next) => {
   const data = req.body;
   let professeur = {};
   const user_up = await User.findById(id);
-  const user = await User.findByIdAndUpdate(id, data, {
-    new: true,
-    runValidators: true,
-  });
+  const user = await User.findById(id);
 
   if (!user) {
     return next(new AppError("Aucun utilisateur trouvé avec cet ID", 404));
   }
+  // user.set("accountNumero", 3456712893);
+  user.prenom = req.body.prenom;
+  user.mobile = req.body.mobile;
+  user.email = req.body.email;
+  user.banque = req.body.banque;
+  user.accountNumero = req.body.accountNumero;
+  const oldValidateBeforeSave = User.schema.options.validateBeforeSave;
+  console.log(oldValidateBeforeSave);
+  User.schema.options.validateBeforeSave = false;
+  try {
+    await user.save();
+  } finally {
+    User.schema.options.validateBeforeSave = oldValidateBeforeSave;
+  }
 
+  /* user.prenom = req.body.prenom;
+  user.mobile = req.body.mobile;
+  user.email = req.body.email;
+  user.banque = req.body.banque;
+  user.accountNumero = req.body.accountNumero;
+  await user.save({ validate: false });
   if (req.body.role != "professeur" && user_up.role === "professeur") {
     const user_prof = await Professeur.findOneAndDelete({ user: id });
   } else if (req.body.role === "professeur" && user_up.role != "professeur") {
     professeur = await Professeur.create({
       user: user._id,
     });
-  }
+  } */
   res.status(201).json({
     status: "succés",
-    message: ` L'utilisateur est modifié ${
-      professeur ? ",le professeur est ajouté" : ""
-    } avec succés !`,
+    message: ` L'utilisateur est modifié  avec succés !`,
     user: user,
   });
 });
