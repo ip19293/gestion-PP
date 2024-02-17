@@ -2,6 +2,7 @@ const mongoose = require("mongoose");
 const Professeur = require("./professeur");
 const Matiere = require("./matiere");
 const Element = require("./element");
+const Filiere = require("./filiere");
 const AppError = require("../utils/appError");
 const emploiSchema = mongoose.Schema({
   type: {
@@ -45,7 +46,8 @@ const emploiSchema = mongoose.Schema({
     ref: "Element",
     required: [true, "élément est requis !"],
   },
-  jour: String,
+  classe: String,
+  jour: { type: String, lowercase: true },
   enseignat: String,
   matiere: String,
   semestre: Number,
@@ -79,6 +81,7 @@ const emploiSchema = mongoose.Schema({
 /* ===================================================================== save  midelwere ======================== */
 emploiSchema.pre("save", async function (next) {
   const element = await Element.findById(this.element);
+  const filiere = await Filiere.findById(element.filiere);
   const professeur = await Professeur.findById(this.professeur);
   console.log(element);
   let type = element["professeur" + this.type];
@@ -115,6 +118,7 @@ emploiSchema.pre("save", async function (next) {
     "Vendredi",
     "Samedi",
   ];
+  this.classe = filiere.niveau + " " + filiere.name;
   this.semestre = element.semestre;
   this.jour = daysOfWeek[this.dayNumero];
   this.enseignat = professeur.nom + " " + professeur.prenom;

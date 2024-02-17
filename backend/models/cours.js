@@ -150,7 +150,7 @@ coursSchema.pre("save", async function (next) {
 
 coursSchema.post("findOneAndDelete", async function (cours) {
   console.log(" cours remove midleweere work ....................");
-  if (cours.isSigned === "oui") {
+  if (cours && cours.isSigned === "oui") {
     const Professeur = require("./professeur");
     let professeur = await Professeur.findById(cours.professeur);
     let cours_info = await cours.getTHSomme();

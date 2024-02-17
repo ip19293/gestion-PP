@@ -41,7 +41,7 @@ app.use(express.json({ limit: "10kb" }));
 app.use(mongoSanitize());
 // Dta sanitization against xss
 app.use(xss());
-
+app.use("/uploads/images", express.static(__dirname + "/uploads/images"));
 //Prevent parameter pollution
 app.use(
   hpp({
@@ -81,7 +81,7 @@ app.use("/professeur", ProfesseurRouter);
 app.use("/categorie", CategorieRouter);
 app.use("/matiere", MatiereRouter);
 app.use("/cours", CoursRouter);
-app.use("/filliere", FilliereRouter);
+app.use("/filiere", FilliereRouter);
 app.use("/emploi", emploiRouter);
 app.use("/paiement", paiementRouter);
 app.use("/element", elementRouter);

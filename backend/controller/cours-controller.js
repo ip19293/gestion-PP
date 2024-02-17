@@ -141,7 +141,7 @@ exports.addCours = catchAsync(async (req, res, next) => {
   res.status(201).json({
     status: "succès",
     message: `Le cour est ajouté avec succés `,
-    // cours,
+    cours,
   });
 });
 /* ======================================================================EDIT COURS ============================================================== */

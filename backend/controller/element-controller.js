@@ -275,13 +275,17 @@ exports.uploadElements = catchAsync(async (req, res, next) => {
         numero = parseInt(x[1].match(/\d+/)[0]);
       }
     } else {
-      const matiere = await Matiere.findOne({ name: x[1] });
-      const element = await Element.findOne({ matiere: matiere._id });
+      const matiere = await Matiere.findOne({ name: x[1].toLowerCase() });
+      const element = await Element.findOne({
+        matiere: matiere._id,
+        filiere: filiere._id,
+        semestre: numero,
+      });
       let professeurs_Total = [[], [], []];
       for (let z = 4; z < 7; z++) {
         let value = x[z].replace("/ ", "/");
-        let professeursCM = value.split("/");
-        for (prof of professeursCM) {
+        let professeurs = value.split("/");
+        for (prof of professeurs) {
           let professeur = prof.split(" ");
           let famille = professeur[2] != undefined ? "." + professeur[2] : "";
           let email =
@@ -291,6 +295,7 @@ exports.uploadElements = catchAsync(async (req, res, next) => {
                 `${famille}` +
                 "@supnum.mr"
               : professeur[0] + `.${professeur[0]}` + "@supnum.mr";
+          email = email.toLowerCase();
           const OldUser = await User.findOne({ email: email });
           if (OldUser && OldUser.role === "professeur") {
             let Oldprofesseur = await Professeur.findOne({ user: OldUser._id });
@@ -302,22 +307,29 @@ exports.uploadElements = catchAsync(async (req, res, next) => {
           }
         }
       }
-      if (matiere && !element) {
-        try {
-          let dt = {
-            matiere: matiere._id,
-            semestre: numero,
-            filiere: filiere._id,
-            professeurCM: professeurs_Total[0],
-            professeurTD: professeurs_Total[1],
-            professeurTP: professeurs_Total[2],
-          };
-
-          const element = await Element.create(dt);
-          console.log(dt);
-        } catch (error) {}
+      if (matiere) {
+        let dt = {
+          matiere: matiere._id,
+          semestre: numero,
+          filiere: filiere._id,
+          professeurCM: professeurs_Total[0],
+          professeurTD: professeurs_Total[1],
+          professeurTP: professeurs_Total[2],
+        };
+        if (!element) {
+          try {
+            const element = await Element.create(dt);
+            //console.log(dt);
+          } catch (error) {}
+        } else {
+          console.log(
+            "ELEMENT EXSISTE BEFORE ---------------------  --------------------------"
+          );
+        }
       } else {
-        console.log("NOT EXISTING MATIERE  --------------------------");
+        console.log(
+          "NOT EXISTING MATIERE  ---------------------  --------------------------"
+        );
       }
     }
   }

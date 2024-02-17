@@ -182,28 +182,13 @@ exports.getFiliereEmplois = catchAsync(async (req, res, next) => {
       new AppError("La filière avec cet identifiant introuvable !", 404)
     );
   }
-  let nb_semestres = (await filiere.getPeriodePlace()[0]) * 2;
-  let emplois = [];
-  if (filiere.isPaireSemestre) {
-    for (let x = 2; x <= nb_semestres; x = x + 2) {
-      let semestre_emplois = await Emploi.find({ filiere: id, semestre: x });
-      emplois.push(semestre_emplois);
-    }
-  } else {
-    for (let x = 1; x <= nb_semestres; x = x + 2) {
-      let semestre_emplois = await Emploi.find({ filiere: id, semestre: x });
-      emplois.push(semestre_emplois);
-    }
-  }
+  const emplois = await Emploi.find({ filiere: filiere._id });
   res.status(200).json({
     status: "succès",
     _id: filiere._id,
     filiere: filiere.name,
     description: filiere.description,
     niveau: filiere.niveau,
-    // ems,
-    //semestres: list_semestres,
-    // elements: data,
     emplois: emplois,
   });
 });

@@ -107,14 +107,14 @@ exports.deleteProfesseur = catchAsync(async (req, res, next) => {
 exports.getProfCours = catchAsync(async (req, res, next) => {
   const id = req.params.id;
   const professeur = await Professeur.findById(id);
-  let prof_info = await professeur.getInfo_Nbh_TH_Nbc_Somme();
+
   if (!professeur) {
     return next(
       new AppError("Aucun enseignant trouvé avec cet identifiant !", 404)
     );
   }
-  const cours_lsit = await Cours.find({ professeur: id });
-  let cours = [];
+  const cours = await Cours.find({ professeur: id });
+  /* let cours = [];
   for (x of cours_lsit) {
     let matiere = await Matiere.findById(x.matiere);
     let cour = await Cours.findById(x._id);
@@ -140,7 +140,7 @@ exports.getProfCours = catchAsync(async (req, res, next) => {
       finishTime: x.finishTime,
     };
     cours.push(data);
-  }
+  } */
   res.status(200).json({
     status: "succés",
     cours,
@@ -251,18 +251,20 @@ exports.getProfesseurById = catchAsync(async (req, res, next) => {
   }
   let matieres = await Oldprofesseur.getMatieres();
   let prof_cours_detail = await Oldprofesseur.DetailNBH_TH_Nbc_Somme();
+  let elements = await Oldprofesseur.getElements();
+  let emplois = await Oldprofesseur.getEmplois();
+  let lundi = emplois[0];
   /*   "2024-02-20T13:36:43.076Z",
     "2024-02-21T13:36:43.076Z" */
-  const professeur = {
-    _id: Oldprofesseur._id,
-    nom: prof_info[1],
-    prenom: prof_info[2],
-    email: prof_info[3],
-  };
+
   res.status(200).json({
     status: "succés",
+    lundi,
+    emplois,
+    elements,
     prof_cours_detail,
     matieres: matieres,
+    professeur: Oldprofesseur,
   });
 });
 ///Get Professeur By Email-----------------------------------------------------------------------------------------
@@ -429,9 +431,6 @@ exports.uploadProfesseurs = catchAsync(async (req, res, next) => {
                 }
               );
             }
-
-            /*    console.log("Matiere  existe --------------------------");
-              console.log("prof existing ...................."); */
           } else {
             let dt = {
               nom: professeur[0],
@@ -442,6 +441,7 @@ exports.uploadProfesseurs = catchAsync(async (req, res, next) => {
               email: email,
               password: "1234@supnum",
               passwordConfirm: "1234@supnum",
+              photo: "http://localhost:5000/uploads/images/user.png",
             };
             try {
               const user = await User.create(dt);

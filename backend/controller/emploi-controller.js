@@ -47,13 +47,7 @@ exports.getEmploiById = catchAsync(async (req, res, next) => {
 /* ==============================================================ADD EMPLOI============================== */
 exports.addEmploi = catchAsync(async (req, res, next) => {
   const element = await Element.findById(req.body.element);
-  const filiere = await Filiere.findById(req.body.filiere);
 
-  if (!filiere) {
-    return next(
-      new AppError("Aucun filiere trouvé avec cet identifiant !", 404)
-    );
-  }
   if (!element) {
     return next(
       new AppError("Aucun élément trouvé avec cet identifiant !", 404)
@@ -116,16 +110,11 @@ exports.addEmploi = catchAsync(async (req, res, next) => {
 exports.updateEmploi = async (req, res, next) => {
   const id = req.params.id;
   const element = await Element.findById(req.body.element);
-  const group = await Group.findById(req.body.group);
+
   const emploi = await Emploi.findById(id);
   if (!emploi) {
     return next(
       new AppError("Aucun emploi trouvé avec cet identifiant !", 404)
-    );
-  }
-  if (!group) {
-    return next(
-      new AppError("Aucun groupe trouvé avec cet identifiant !", 404)
     );
   }
   if (!element) {
@@ -171,7 +160,6 @@ exports.updateEmploi = async (req, res, next) => {
   emploi.startTime = req.body.startTime;
   emploi.element = req.body.element;
   emploi.dayNumero = req.body.dayNumero;
-  emploi.group = req.body.group;
   await emploi.save();
 
   res.status(200).json({
@@ -203,7 +191,7 @@ exports.getEmploisByProfesseurId = catchAsync(async (req, res, next) => {
     return next(new AppError("Aucun enseignant trouvé !", 404));
   }
 
-  const emplois_list = await Emploi.aggregate([
+  const emplois = await Emploi.aggregate([
     {
       $match: {
         professeur: new mongoose.Types.ObjectId(id),
@@ -231,36 +219,8 @@ exports.getEmploisByProfesseurId = catchAsync(async (req, res, next) => {
       },
     },
   ]);
-  let emplois = [];
-  for (x of emplois_list) {
-    let em = await Emploi.findById(x._id);
-    let group = await Group.findById(x.group);
-    if (!group) {
-      return next(
-        new AppError("Aucun groupe trouvé avec cet identifiant !", 404)
-      );
-    }
-    let dt = await em.getProfesseurMatiere();
-    let day = await em.getDayName();
-    let group_info = await group.getSNumero_FId_FName_FNiveau_NiveauAnnee();
-    let data = {
-      id: x._id,
-      group: x.group,
-      day: day,
-      startTime: x.startTime,
-      finishTime: x.finishTime,
-      dayNumero: x.dayNumero,
-      type: x.type,
-      nbh: x.nbh,
-      semestre: group_info[0],
-      filliere: group_info[2],
-      niveau: group_info[3],
-      anne: group_info[4],
-      matiere: dt[2],
-    };
-    emplois.push(data);
-  }
-  const groupedEmploi = emplois.reduce((acc, obj) => {
+
+  /*   const groupedEmploi = emplois.reduce((acc, obj) => {
     const key = obj.day;
     if (!acc[key]) {
       acc[key] = [];
@@ -268,7 +228,7 @@ exports.getEmploisByProfesseurId = catchAsync(async (req, res, next) => {
     acc[key].push(obj);
 
     return acc;
-  }, {});
+  }, {}); */
   /*  let data = [];
   if (groupedEmploi.Dimanche) data.push(groupedEmploi.Dimanche);
   if (groupedEmploi.Lundi) data.push(groupedEmploi.Lundi);
@@ -279,7 +239,7 @@ exports.getEmploisByProfesseurId = catchAsync(async (req, res, next) => {
   if (groupedEmploi.Samedi) data.push(groupedEmploi.Samedi); */
   res.status(200).json({
     status: "succés",
-    groupedEmploi,
+    /*   groupedEmploi, */
     emplois,
   });
 });
@@ -418,10 +378,7 @@ exports.uploadEmplois = catchAsync(async (req, res, next) => {
             nbh: 1.5,
             element: element ? element._id : "",
             professeur: Oldprofesseur ? Oldprofesseur._id : "",
-            matiere:
-              y == 1
-                ? finalJsonData[matiere_index][1].toLowerCase()
-                : finalJsonData[index + 1][matiere_index].toLowerCase(),
+            matiere: matiere,
           };
           if (!Oldprofesseur) {
             const Olduser = await User.findOne({ email: email });
@@ -434,11 +391,12 @@ exports.uploadEmplois = catchAsync(async (req, res, next) => {
               email: email,
               password: "1234@supnum",
               passwordConfirm: "1234@supnum",
+              photo: "http://localhost:5000/uploads/images/user.png",
             };
             const user = Olduser ? Olduser : await User.create(dt);
             const professeur = await Professeur.create({
               user: user._id,
-              matieres: matiere._id,
+              matieres: element.matiere,
             });
             data.professeur = professeur._id;
           } else {
@@ -449,7 +407,7 @@ exports.uploadEmplois = catchAsync(async (req, res, next) => {
                 },
                 {
                   $addToSet: {
-                    matieres: element._id,
+                    matieres: element.matiere,
                   },
                 }
               );
@@ -464,11 +422,20 @@ exports.uploadEmplois = catchAsync(async (req, res, next) => {
               await newCategorie.save();
               let dataM = {
                 categorie: newCategorie._id,
-                code: data.code.substring(0, 3),
-                name: data.matiere.toLowerCase(),
+                name: data.matiere,
               };
               const matiere = new Matiere(dataM);
               await matiere.save();
+              await Professeur.updateOne(
+                {
+                  _id: Oldprofesseur._id,
+                },
+                {
+                  $addToSet: {
+                    matieres: matiere._id,
+                  },
+                }
+              );
               const filiere = await Filiere.findOne({ name: filiere });
               let dt = {
                 matiere: matiere._id,
@@ -480,8 +447,21 @@ exports.uploadEmplois = catchAsync(async (req, res, next) => {
               };
 
               const element = await Element.create(dt);
-              data.element = el._id;
+              data.element = element._id;
             } catch (error) {}
+          } else {
+            await Element.updateOne(
+              {
+                _id: element._id,
+              },
+              {
+                $addToSet: {
+                  professeurCM: Oldprofesseur._id,
+                  professeurTP: Oldprofesseur._id,
+                  professeurTD: Oldprofesseur._id,
+                },
+              }
+            );
           }
           /* -----------------------------------------------------Creation d'emploi----------------------------------------- */
           const cours_list = await Emploi.find({

@@ -1,7 +1,7 @@
 const mongoose = require("mongoose");
 const Matiere = require("../models/matiere");
 const User = require("../auth/models/user");
-const matiere = require("../models/matiere");
+
 const professeurSchema = mongoose.Schema(
   {
     matieres: [
@@ -186,23 +186,111 @@ professeurSchema.methods.DetailNBH_TH_Nbc_Somme = async function (debit, fin) {
 
   return data;
 };
+/* -----------------------------------------------------------get professeur matieres method------------------------------- */
 professeurSchema.methods.getMatieres = async function () {
   const Matiere = require("./matiere");
   const professeur = await this.constructor.findById(this._id);
   let matieres = [];
   for (elem of professeur.matieres) {
-    let matiere = await Matiere.findById(elem);
-    let matiere_info = await matiere.getCodePrixCNameCCode();
-    let data = {
-      _id: matiere._id,
-      name: matiere.name,
-      categorie: matiere_info[2],
-      numero: matiere.numero,
-      prix: matiere_info[1],
-      code: matiere_info[0],
-    };
-    matieres.push(data);
+    try {
+      let matiere = await Matiere.findById(elem);
+      let matiere_info = await matiere.getCodePrixCNameCCode();
+      let dt = {
+        _id: matiere._id,
+        name: matiere.name,
+        prix: matiere_info[1],
+        categorie: matiere_info[2],
+        code: matiere_info[0],
+      };
+      matieres.push(dt);
+    } catch (error) {}
   }
   return matieres;
+};
+/* ----------------------------------------------------------get professeur elements method------------------------------------ */
+professeurSchema.methods.getElements = async function (type) {
+  const Element = require("./element");
+  const professeur = await this.constructor.findById(this._id);
+  let elements = [];
+  if (type != undefined) {
+    let profCT = "professeur" + type;
+    const query = {};
+    query[profCT] = { $in: [professeur._id] };
+    elements = await Element.find(query);
+  } else {
+    elements = await Element.find({
+      $or: [
+        { professeurCM: { $in: [professeur._id] } },
+        { professeurTP: { $in: [professeur._id] } },
+        { professeurTD: { $in: [professeur._id] } },
+      ],
+    });
+  }
+
+  return elements;
+};
+professeurSchema.methods.getEmplois = async function () {
+  const Emploi = require("../models/emploi");
+  const daysOfWeek = [
+    "lundi",
+    "mardi",
+    "mercredi",
+    "jeudi",
+    "vendredi",
+    "samedi",
+    "dimanche",
+  ];
+  let emplois_temp = [];
+  const emplois = await Emploi.aggregate([
+    {
+      $match: {
+        professeur: new mongoose.Types.ObjectId(this._id),
+      },
+    },
+    {
+      $addFields: {
+        hour: {
+          $toInt: {
+            $arrayElemAt: [{ $split: ["$startTime", ":"] }, 0],
+          },
+        },
+        minute: {
+          $toInt: {
+            $arrayElemAt: [{ $split: ["$startTime", ":"] }, 1],
+          },
+        },
+      },
+    },
+    {
+      $sort: {
+        dayNumero: -1,
+        hour: 1,
+        minute: 1,
+      },
+    },
+    {
+      $group: {
+        _id: "$jour", // Field to group by
+        documents: { $push: "$$ROOT" }, // Push each document into an array
+      },
+    },
+    /*    {
+      $project: {
+        jour: "$_id", // Rename _id to groupName
+        documents: 1, // Include the documents array
+        _id: 0, // Exclude _id field
+      },
+    }, */
+  ]).then((groups) => {
+    const result = daysOfWeek.map((day) => {
+      const documents =
+        groups.find((group) => group._id === day)?.documents || [];
+      return { [day]: documents };
+    });
+    emplois_temp = result;
+    console.log(result); // Result containing an array of objects, each object representing documents for a specific day
+  });
+
+  return emplois_temp;
 };
 module.exports = mongoose.model("Professeur", professeurSchema);

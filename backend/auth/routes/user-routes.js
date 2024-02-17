@@ -6,13 +6,13 @@ const authController = require("../../auth/controller/auth-controller");
 const multer = require("multer");
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
-    cb(null, "backend/auth/uploads/");
+    cb(null, "backend/uploads/images/");
   },
   filename: function (req, file, cb) {
     const fileName = file.originalname.split(" ").join("-");
     const extention = file.originalname.split(".")[1];
     const uniqueSuffix = Date.now();
-    cb(null, file.originalname + "_" + uniqueSuffix + "." + extention);
+    cb(null, fileName + "_" + uniqueSuffix + "." + extention);
   },
 });
 
@@ -26,7 +26,7 @@ router
     authController.restricTo("admin"),
     userController.getUsers
   )
-  .post(userController.addUser);
+  .post(upload.single("image"), userController.addUser);
 router.param("id", (req, res, next, val) => {
   console.log(`id de user est ${val}`);
   next();
@@ -43,6 +43,7 @@ router
   .patch(
     authController.protect,
     authController.restricTo("admin", "responsable"),
+    upload.single("image"),
     userController.updateUser
   );
 router

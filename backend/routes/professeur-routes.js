@@ -18,6 +18,22 @@ const storage = multer.diskStorage({
 
 const upload = multer({ storage });
 /* ---------------------------------------------------------------------------------- */
+/* -------------------------------------------------uplods images---------------- */
+
+const storageIMG = multer.diskStorage({
+  destination: function (req, file, cb) {
+    cb(null, "backend/uploads/images");
+  },
+  filename: function (req, file, cb) {
+    const fileName = file.originalname.split(" ").join("-");
+    const extention = file.originalname.split(".")[1];
+    /* const uniqueSuffix = Date.now(); */
+    cb(null, fileName + "." + extention);
+  },
+});
+
+const uploadIMG = multer({ storageIMG });
+/* ----------------------------------------------------------------------- */
 const router = express.Router();
 router
   .route("/")
@@ -27,13 +43,12 @@ router
     professeurController.getProfesseurs
   )
   .post(professeurController.addProfesseur);
-router
-  .route("/upload")
-  .post(
-    authController.protect,
-    upload.single("file"),
-    professeurController.uploadProfesseurs
-  );
+router.route("/upload").post(
+  authController.protect,
+  upload.single("file"),
+  /*  uploadIMG.single("image"), */
+  professeurController.uploadProfesseurs
+);
 router
   .route("/:email/email")
   .get(authController.protect, professeurController.getProfesseurEmail);
