@@ -107,6 +107,7 @@ exports.getFiliere = catchAsync(async (req, res, next) => {
   const id = req.params.id;
   const filiere = await Filiere.findById(id);
   let filiere_info = await filiere.getPeriodePlace();
+  let emplois = await filiere.getEmplois();
   if (!filiere) {
     return next(
       new AppError("La filière avec cet identifiant introuvable !", 404)
@@ -114,6 +115,7 @@ exports.getFiliere = catchAsync(async (req, res, next) => {
   }
   res.status(200).json({
     status: "succès",
+    emplois,
     filiere_info,
     filiere,
   });
@@ -182,7 +184,7 @@ exports.getFiliereEmplois = catchAsync(async (req, res, next) => {
       new AppError("La filière avec cet identifiant introuvable !", 404)
     );
   }
-  const emplois = await Emploi.find({ filiere: filiere._id });
+  let emplois = await filiere.getEmplois();
   res.status(200).json({
     status: "succès",
     _id: filiere._id,

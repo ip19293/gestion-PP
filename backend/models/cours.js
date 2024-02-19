@@ -1,7 +1,7 @@
 const mongoose = require("mongoose");
-const Matiere = require("./matiere");
 const Professeur = require("./professeur");
 const AppError = require("../utils/appError");
+const sendEmail = require("../utils/email");
 const coursSchema = mongoose.Schema(
   {
     type: {
@@ -145,6 +145,30 @@ coursSchema.pre("save", async function (next) {
   this.th = tauxHoreure;
   this.somme = sommeUM;
   next();
+});
+/* ---------------------------------------------------------------------------------------------- */
+coursSchema.post("save", async function (cours) {
+  const professeur = await Professeur.findById(cours.professeur);
+  const professeur_cours = await this.constructor.find({
+    professeur: cours.professeur,
+    isSigned: "pas encore",
+  });
+  const message = `Nouveau cours non  signées ? Connectez-vous a votre compte chez nous Vérifieez les messages  puis signez .\n
+
+  `;
+  if (professeur_cours.length > 0) {
+    try {
+      await sendEmail({
+        email: professeur.email,
+        subject: ` ${professeur_cours.length} cours pas encore signées`,
+        message,
+      });
+    } catch (error) {
+      /*     return next(
+        new AppError("échec de l'envoi de l'e-mail . réessayez plus tard !", 500)
+      ); */
+    }
+  }
 });
 /*-------------------------------------------------DELETE findOneAndDelete ------------------------------------------ */
 

@@ -156,20 +156,11 @@ exports.getElementsByMatiereId = catchAsync(async (req, res, next) => {
 });
 exports.getProfesseursByMatiereId = catchAsync(async (req, res, next) => {
   let filter = {};
-  let professeurs = [];
-  const professeurs_list = await Professeur.find({
+
+  const professeurs = await Professeur.find({
     matieres: req.params.id,
   });
-  for (x of professeurs_list) {
-    let professeur = await Professeur.findById(x._id);
-    let prof_info = await professeur.getInfo_Nbh_TH_Nbc_Somme();
-    let dt = {
-      _id: x._id,
-      nom: prof_info[1],
-      prenom: prof_info[2],
-    };
-    professeurs.push(dt);
-  }
+
   res.status(200).json({
     status: "succés",
     professeurs,

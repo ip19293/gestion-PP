@@ -48,15 +48,68 @@ filiereSchema.methods.getPeriodePlace = function () {
   return [periode, place];
 };
 filiereSchema.methods.getEmplois = async function () {
-  const Semestre = require("./facture");
   const Emploi = require("./emploi");
-  const semestres = await Semestre.find({ filiere: this._id });
-  for (let semestre of semestres) {
-    let groups = await Group.find({ semestre: semestre._id });
-    for (let group of groups) {
-      let emplois = await Emploi.find({ group: group._id });
-    }
-  }
+  const daysOfWeek = [
+    "lundi",
+    "mardi",
+    "mercredi",
+    "jeudi",
+    "vendredi",
+    "samedi",
+    "dimanche",
+  ];
+  let emplois_temp = [];
+  const emplois = await Emploi.aggregate([
+    {
+      $match: {
+        filiere: new mongoose.Types.ObjectId(this._id),
+      },
+    },
+    {
+      $addFields: {
+        hour: {
+          $toInt: {
+            $arrayElemAt: [{ $split: ["$startTime", ":"] }, 0],
+          },
+        },
+        minute: {
+          $toInt: {
+            $arrayElemAt: [{ $split: ["$startTime", ":"] }, 1],
+          },
+        },
+      },
+    },
+    {
+      $sort: {
+        dayNumero: -1,
+        hour: 1,
+        minute: 1,
+      },
+    },
+    {
+      $group: {
+        _id: "$jour", // Field to group by
+        documents: { $push: "$$ROOT" }, // Push each document into an array
+      },
+    },
+    /*    {
+      $project: {
+        jour: "$_id", // Rename _id to groupName
+        documents: 1, // Include the documents array
+        _id: 0, // Exclude _id field
+      },
+    }, */
+  ]).then((groups) => {
+    const result = daysOfWeek.map((day) => {
+      const documents =
+        groups.find((group) => group._id === day)?.documents || [];
+      return { [day]: documents };
+    });
+    emplois_temp = result;
+    console.log(result); // Result containing an array of objects, each object representing documents for a specific day
+  });
+
+  return emplois_temp;
 };
 filiereSchema.post("findOneAndDelete", async function (filiere, message) {
   console.log(" filiere remove midleweere work ....................");

@@ -79,19 +79,20 @@ const userSchema = mongoose.Schema({
   },
 });
 
-userSchema.pre("save", async function (next) {
+userSchema.post("save", async function () {
   const Professeur = require("../../models/professeur");
   const professeur = await Professeur.findOne({ user: this._id });
   if (professeur) {
-    professeur.info[0] = this.nom + " " + this.prenom;
-    professeur.info[1] = this.email;
-    professeur.info[2] = this.mobile;
-    professeur.info[3] = this.banque;
-    professeur.info[4] = this.accountNumero;
+    professeur.nom = this.nom;
+    professeur.prenom = this.prenom;
+    professeur.email = this.email;
+    professeur.info.mobile = this.mobile;
+    professeur.info.banque = this.banque;
+    professeur.info.accountNumero = this.accountNumero;
     await professeur.save();
   }
 
-  next();
+  // next();
 });
 userSchema.pre("save", function (next) {
   if (!this.isModified("password") || this.isNew) return next();

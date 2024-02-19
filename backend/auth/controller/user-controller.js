@@ -119,6 +119,7 @@ exports.updateUser = catchAsync(async (req, res, next) => {
   const id = req.params.id;
   const fileName = req.file != undefined ? req.file.filename : "";
   const basePath = `${req.protocol}://${req.get("host")}/uploads/images/`;
+  /* 
   const data = {
     nom: req.body.nom,
     prenom: req.body.prenom,
@@ -129,7 +130,7 @@ exports.updateUser = catchAsync(async (req, res, next) => {
     accountNumero: req.body.accountNumero,
   };
   let professeur = {};
-  const user_up = await User.findById(id);
+
   const user = await User.findByIdAndUpdate(id, data, {
     new: true,
     runValidators: true,
@@ -137,7 +138,7 @@ exports.updateUser = catchAsync(async (req, res, next) => {
 
   if (!user) {
     return next(new AppError("Aucun utilisateur trouvé avec cet ID", 404));
-  }
+  } */
   /*   user.nom = req.body.nom;
   user.prenom = req.body.prenom;
   user.mobile = req.body.mobile;
@@ -167,19 +168,26 @@ exports.updateUser = catchAsync(async (req, res, next) => {
     User.schema.options.validateBeforeSave = oldValidateBeforeSave;
   }
  */
-  /* user.prenom = req.body.prenom;
-  user.mobile = req.body.mobile;
-  user.email = req.body.email;
-  user.banque = req.body.banque;
-  user.accountNumero = req.body.accountNumero;
-  await user.save({ validate: false });
-  if (req.body.role != "professeur" && user_up.role === "professeur") {
-    const user_prof = await Professeur.findOneAndDelete({ user: id });
-  } else if (req.body.role === "professeur" && user_up.role != "professeur") {
-    professeur = await Professeur.create({
-      user: user._id,
-    });
-  } */
+  const user = await User.findById(id);
+  user.prenom = req.body.prenom != undefined ? req.body.prenom : user.prenom;
+  user.nom = req.body.nom != undefined ? req.body.nom : user.nom;
+  user.mobile = req.body.mobile != undefined ? req.body.mobile : user.mobile;
+  user.email = req.body.email != undefined ? req.body.email : user.email;
+  user.banque = req.body.banque != undefined ? req.body.banque : user.banque;
+  user.photo = req.file != undefined ? `${basePath}${fileName}` : user.photo;
+  user.accountNumero =
+    req.body.accountNumero != undefined
+      ? req.body.accountNumero
+      : user.accountNumero;
+  const oldValidateBeforeSave = User.schema.options.validateBeforeSave;
+  console.log(oldValidateBeforeSave);
+  User.schema.options.validateBeforeSave = false;
+  try {
+    await user.save();
+  } finally {
+    User.schema.options.validateBeforeSave = oldValidateBeforeSave;
+  }
+
   res.status(201).json({
     status: "succés",
     message: ` L'utilisateur est modifié  avec succés !`,
