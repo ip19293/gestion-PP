@@ -78,6 +78,27 @@ paiementSchema.pre("save", async function (next) {
   const professeur = await Professeur.findById(this.professeur);
 
   this.enseignant = professeur.nom + " " + professeur.prenom;
+
+  next();
+});
+paiementSchema.post("save", async function (paiement) {
+  const professeur = await Professeur.findById(paiement.professeur);
+
+  const message = `Nouveau paiement non  validée ? Connectez-vous a votre compte chez nous Vérifieez les notifications  puis validez .\n
+
+  `;
+  /*   if (professeur_cours.length > 0) { */
+  try {
+    await sendEmail({
+      email: professeur.email,
+      subject: ` 1 paiement pas encore validée`,
+      message,
+    });
+  } catch (error) {
+    /*     return next(
+        new AppError("échec de l'envoi de l'e-mail . réessayez plus tard !", 500)
+      ); */
+  }
 });
 /* ===========================================================================================METHODS ========================= */
 

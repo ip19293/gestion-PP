@@ -184,7 +184,8 @@ exports.getFiliereEmplois = catchAsync(async (req, res, next) => {
       new AppError("La filière avec cet identifiant introuvable !", 404)
     );
   }
-  let emplois = await filiere.getEmplois();
+  /*   let emplois = await filiere.getEmplois(); */
+  let emplois = await Emploi.find({ filiere: id });
   res.status(200).json({
     status: "succès",
     _id: filiere._id,
