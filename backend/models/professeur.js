@@ -93,6 +93,29 @@ professeurSchema.methods.getUserInformation = async function () {
   const user = await User.findById(this.user);
   return user;
 };
+professeurSchema.methods.setNBC_NBH_SOMME = async function (cours, option) {
+  const professeur = await this.constructor.findById(this._id);
+  let cours_info = await cours.getTHSomme();
+  if (option === undefined || option === "add") {
+    professeur.nbh =
+      professeur.nbh >= 0 ? professeur.nbh + cours.nbh : professeur.nbh;
+    professeur.nbc = professeur.nbc >= 0 ? professeur.nbc + 1 : professeur.nbc;
+    professeur.somme =
+      professeur.somme >= 0
+        ? professeur.somme + cours_info[1]
+        : professeur.somme;
+  } else {
+    professeur.nbh =
+      professeur.nbh > 0 ? professeur.nbh - cours.nbh : professeur.nbh;
+    professeur.nbc = professeur.nbc > 0 ? professeur.nbc - 1 : professeur.nbc;
+    professeur.somme =
+      professeur.somme > 0
+        ? professeur.somme - cours_info[1]
+        : professeur.somme;
+  }
+
+  await professeur.save();
+};
 /* -------------------------------------------------------------------GET NBH TH NBC SOMME ----------------------------------------- */
 professeurSchema.methods.getDebitDate_FinDate = async function (debit, fin) {
   const Cours = require("./cours");
@@ -103,10 +126,10 @@ professeurSchema.methods.getDebitDate_FinDate = async function (debit, fin) {
       ? {
           date: { $gte: debitDate, $lte: finDate },
           professeur: this._id,
-          isSigned: "oui",
-          isPaid: "pas encore",
+          isSigned: "effectué",
+          isPaid: "en attente",
         }
-      : { professeur: this._id, isSigned: "oui", isPaid: "pas encore" };
+      : { professeur: this._id, isSigned: "effectué", isPaid: "en attente" };
   const prof_cours = await Cours.find(query).sort({ date: 1 });
   debitDate = prof_cours.length != 0 ? prof_cours[0].date : new Date();
   finDate =
@@ -132,15 +155,15 @@ professeurSchema.methods.DetailNBH_TH_Nbc_Somme = async function (debit, fin) {
           $match: {
             date: { $gte: debitDate, $lte: finDate },
             professeur: new mongoose.Types.ObjectId(this._id),
-            isSigned: "oui",
-            isPaid: "pas encore",
+            isSigned: "effectué",
+            isPaid: "en attente",
           },
         }
       : {
           $match: {
             professeur: new mongoose.Types.ObjectId(this._id),
-            isSigned: "oui",
-            isPaid: "pas encore",
+            isSigned: "effectué",
+            isPaid: "en attente",
           },
         };
   // data: { $push: "$$ROOT" },

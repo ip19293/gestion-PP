@@ -51,17 +51,18 @@ const coursSchema = mongoose.Schema(
       required: [true, "element est requis"],
     },
     matiere: String,
+    signedBy: String,
     enseignant: String,
     prix: Number,
     isSigned: {
       type: String,
-      default: "pas encore",
-      enum: ["oui", "pas encore"],
+      default: "en attente",
+      enum: ["effectué", "en attente", "annulé"],
     },
     isPaid: {
       type: String,
-      default: "pas encore",
-      enum: ["oui", "pas encore", "préparée"],
+      default: "en attente",
+      enum: ["en attente", "préparé", "effectué"],
     },
   },
   { timestamps: true },
@@ -96,8 +97,8 @@ coursSchema.pre("validate", async function (next) {
       );
     }
     if (
-      this.isSigned == "pas encore" &&
-      ["oui", "préparée"].includes(this.isPaid)
+      this.isSigned == "en attente" &&
+      ["effectué", "préparé"].includes(this.isPaid)
     ) {
       return next(
         new AppError(
@@ -144,23 +145,29 @@ coursSchema.pre("save", async function (next) {
   this.prix = prix;
   this.th = tauxHoreure;
   this.somme = sommeUM;
+  /*  if (!this.isNew) {
+    console.log("yes--------------------------------------");
+  } else {
+    console.log("no---------------------------------");
+  }
+ */
   next();
 });
 /* ---------------------------------------------------------------------------------------------- */
-coursSchema.post("save", async function (cours) {
+coursSchema.post("save", async function (cours, next) {
   const professeur = await Professeur.findById(cours.professeur);
   const professeur_cours = await this.constructor.find({
     professeur: cours.professeur,
-    isSigned: "pas encore",
+    isSigned: "en attente",
   });
-  const message = `Nouveau cours non  signées ? Connectez-vous a votre compte chez nous Vérifieez les messages  puis signez .\n
+  let message = `Nouveaux cours à  signer ? Connectez-vous a votre compte et signez les cours non signées.\n
 
   `;
   if (professeur_cours.length > 0) {
     try {
       await sendEmail({
         email: professeur.email,
-        subject: ` ${professeur_cours.length} cours pas encore signées`,
+        subject: ` ${professeur_cours.length} Cours à signer`,
         message,
       });
     } catch (error) {
@@ -169,22 +176,33 @@ coursSchema.post("save", async function (cours) {
       ); */
     }
   }
+
+  next();
 });
 /*-------------------------------------------------DELETE findOneAndDelete ------------------------------------------ */
 
 coursSchema.post("findOneAndDelete", async function (cours) {
   console.log(" cours remove midleweere work ....................");
-  if (cours && cours.isSigned === "oui") {
-    const Professeur = require("./professeur");
+  if (cours && cours.isSigned === "effectué") {
     let professeur = await Professeur.findById(cours.professeur);
-    let cours_info = await cours.getTHSomme();
-    professeur.nbh = professeur.nbh - cours.nbh;
-    professeur.nbc = professeur.nbc - 1;
-    professeur.somme = professeur.somme - cours_info[1];
-    await professeur.save();
-  } /*  else {
-    console.log(" Not Signed cours deleted");
-  } */
+    await professeur.setNBC_NBH_SOMME(cours, "remove");
+  }
+});
+
+coursSchema.post("findOneAndUpdate", async function (cours, next) {
+  let professeur = await Professeur.findById(cours.professeur);
+  if (cours.isSigned === "annulé" && cours.signedBy != "admin") {
+    message = `Vous avez signé un cours qui n'a pas été fait ,le superviseur a remis votre signature .\n Veuillez toujours confirmer avant de signer .`;
+    try {
+      await sendEmail({
+        email: professeur.email,
+        subject: ` Votre signature a été annulé `,
+        message,
+      });
+    } catch (error) {}
+  }
+
+  next();
 });
 /* =====================================================================METHODS============================== */
 coursSchema.methods.getTHSomme = async function () {

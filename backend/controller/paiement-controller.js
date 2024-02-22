@@ -67,11 +67,11 @@ exports.addPaiement = catchAsync(async (req, res, next) => {
   const filter = {
     date: { $gte: req.body.fromDate, $lte: req.body.toDate },
     professeur: data.professeur,
-    isSigned: "oui",
-    isPaid: "pas encore",
+    isSigned: "effectué",
+    isPaid: "en attente",
   };
   let up_cours = await Cours.updateMany(filter, {
-    $set: { isPaid: "préparée" },
+    $set: { isPaid: "préparé" },
   });
 
   res.status(200).json({
@@ -126,11 +126,11 @@ exports.deletePaiement = catchAsync(async (req, res, next) => {
   const filter = {
     date: { $gte: paiement.fromDate, $lte: paiement.toDate },
     professeur: paiement.professeur,
-    isSigned: "oui",
-    isPaid: "préparée",
+    isSigned: "effectué",
+    isPaid: "préparé",
   };
   let up_cours = await Cours.updateMany(filter, {
-    $set: { isPaid: "pas encore" },
+    $set: { isPaid: "en attente" },
   });
   const deleted_paiement = await Paiement.findOneAndDelete({ _id: id });
   res.status(200).json({

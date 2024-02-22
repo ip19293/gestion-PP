@@ -166,7 +166,7 @@ exports.updateCours = async (req, res, next) => {
     );
   }
   let type = element["professeur" + req.body.type];
-  console.log(type);
+
   const professeur_elm = await Professeur.findById(type);
   let query = professeur_elm
     ? { _id: { $ne: id }, element: req.body.element, date: req.body.date }
@@ -223,37 +223,79 @@ exports.updateCours = async (req, res, next) => {
 */
 exports.signeCours = async (req, res, next) => {
   const id = req.params.id;
-  const cours = await Cours.findByIdAndUpdate(
-    id,
-    {
-      isSigned: "oui",
-    },
-    {
-      new: true,
-      runValidators: true,
-    }
-  );
-  let professeur = await Professeur.findById(cours.professeur);
-  let cours_info = await cours.getTHSomme();
-  professeur.nbh = professeur.nbh + cours.nbh;
-  professeur.nbc = professeur.nbc + 1;
-  professeur.somme = professeur.somme + cours_info[1];
-  await professeur.save();
+  let message = "Le cours est signé avec succés .";
+  const cours_sign = await Cours.findById(id);
+  if (!cours_sign) {
+    return next(
+      new AppError("Aucune cours trouvée avec cet identifiant !", 404)
+    );
+  }
+  if (cours_sign.isSigned === "annulé" && cours_sign.signedBy != "admin") {
+    return next(
+      new AppError(
+        "La signature a été annulé afin que le cours ne soit pas compté !",
+        404
+      )
+    );
+  }
+  const professeur = await Professeur.findById(cours_sign.professeur);
+  if (!professeur) {
+    return next(
+      new AppError("Aucune professeur trouvée avec cet identifiant !", 404)
+    );
+  }
+  let query = {};
+  if (cours_sign.isSigned === "annulé") {
+    query =
+      req.user.role === "admin"
+        ? {
+            isSigned: "en attente",
+            signedBy: undefined,
+          }
+        : {};
+    message =
+      req.user.role === "admin"
+        ? "La signature mise en attente par l'admin avec succés."
+        : "La signature a été annulé seul d'admin peut mise en attente ";
+  } else if (cours_sign.isSigned === "en attente") {
+    query = {
+      isSigned: "effectué",
+      signedBy: req.user.role,
+    };
+    await professeur.setNBC_NBH_SOMME(cours_sign);
+  } else {
+    query =
+      req.user.role === "admin"
+        ? {
+            isSigned: "annulé",
+          }
+        : {};
+    await professeur.setNBC_NBH_SOMME(cours_sign, "remove");
+    message =
+      req.user.role === "admin"
+        ? "La signature a été annulé  avec succés."
+        : "Seul l'admin qui peut annuler la signature !";
+  }
+  const cours = await Cours.findOneAndUpdate({ _id: id }, query, {
+    new: true,
+    runValidators: true,
+  });
+
   res.status(200).json({
     status: "succès",
-    message: "Le cours est signé avec succés .",
+    message,
     cours,
   });
 };
 /* -------------------------------------------------------------------- signe all cours not signe------------------ */
 exports.signeAllCours = async (req, res, next) => {
   const id = req.params.id;
-  const all_cours = await Cours.find({ isSigned: "pas encore" });
+  const all_cours = await Cours.find({ isSigned: "en attente" });
   all_cours.forEach(async (elm) => {
     await Cours.findByIdAndUpdate(
       elm._id,
       {
-        isSigned: "oui",
+        isSigned: "effectué",
       },
       {
         new: true,
@@ -286,7 +328,7 @@ exports.getNotPaidCours = catchAsync(async (req, res, next) => {
   const cours = await Cours.aggregate([
     {
       $match: {
-        isPaid: "pas encore",
+        isPaid: "en attente",
       },
     },
     {
@@ -353,13 +395,13 @@ exports.getAllCoursProf = catchAsync(async (req, res, next) => {
           date: { $gte: debit, $lte: fin },
           /*  professeur: req.params.id, */
           date: { $gte: req.body.debit, $lte: req.body.fin },
-          isSigned: "oui",
-          isPaid: "pas encore",
+          isSigned: "effectué",
+          isPaid: "en attente",
         }
       : {
           /*    professeur: req.params.id, */
-          isSigned: "oui",
-          isPaid: "pas encore",
+          isSigned: "effectué",
+          isPaid: "en attente",
         };
   const cours_list = await Cours.find(query).sort({ date: 1 });
 

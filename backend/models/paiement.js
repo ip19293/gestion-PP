@@ -1,5 +1,6 @@
 const mongoose = require("mongoose");
 const Professeur = require("../models/professeur");
+const sendEmail = require("../utils/email");
 const paiementSchema = mongoose.Schema(
   {
     date: {
@@ -81,17 +82,13 @@ paiementSchema.pre("save", async function (next) {
 
   next();
 });
-paiementSchema.post("save", async function (paiement) {
+paiementSchema.post("save", async function (paiement, next) {
   const professeur = await Professeur.findById(paiement.professeur);
-
-  const message = `Nouveau paiement non  validée ? Connectez-vous a votre compte chez nous Vérifieez les notifications  puis validez .\n
-
-  `;
-  /*   if (professeur_cours.length > 0) { */
+  const message = `Nouvelle facture de  paiement non  validée ? Connectez-vous a votre compte et  validez la facture .\n`;
   try {
     await sendEmail({
       email: professeur.email,
-      subject: ` 1 paiement pas encore validée`,
+      subject: ` Une facture de paiement non validée`,
       message,
     });
   } catch (error) {
@@ -99,6 +96,7 @@ paiementSchema.post("save", async function (paiement) {
         new AppError("échec de l'envoi de l'e-mail . réessayez plus tard !", 500)
       ); */
   }
+  next();
 });
 /* ===========================================================================================METHODS ========================= */
 

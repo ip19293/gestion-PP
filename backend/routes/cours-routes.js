@@ -25,7 +25,10 @@ CoursRouter.route("/auto-create").get(
   createCoursFromEmploiController.auto
 );
 CoursRouter.route("/:id/cours").post(courController.getCoursByProfesseursId);
-CoursRouter.route("/:id/signe").patch(courController.signeCours);
+CoursRouter.route("/:id/signe").patch(
+  authController.protect,
+  courController.signeCours
+);
 
 CoursRouter.route("/:id")
   .delete(authController.protect, courController.deleteCours)

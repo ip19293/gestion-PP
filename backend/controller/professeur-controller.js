@@ -155,7 +155,7 @@ exports.getProfCoursSigned = catchAsync(async (req, res, next) => {
       new AppError("Aucun enseignant trouvé avec cet identifiant !", 404)
     );
   }
-  const cours = await Cours.find({ professeur: id, isSigned: "oui" });
+  const cours = await Cours.find({ professeur: id, isSigned: "effectué" });
   /*  const cours_lsit = await Cours.find({ professeur: id, isSigned: "oui" });
   let cours = [];
   for (x of cours_lsit) {
@@ -200,7 +200,7 @@ exports.getProfCoursNon = catchAsync(async (req, res, next) => {
   }
   const cours = await Cours.find({
     professeur: id,
-    isSigned: "pas encore",
+    isSigned: "en attente",
   });
   /*   let cours = [];
   for (x of cours_lsit) {
