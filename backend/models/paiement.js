@@ -1,5 +1,6 @@
 const mongoose = require("mongoose");
 const Professeur = require("../models/professeur");
+const Cours = require("../models/cours");
 const sendEmail = require("../utils/email");
 const paiementSchema = mongoose.Schema(
   {
@@ -21,6 +22,7 @@ const paiementSchema = mongoose.Schema(
       type: mongoose.Schema.ObjectId,
       ref: "Professeur",
       required: [true, "professeur est requis !"],
+      unique: true,
     },
     nbh: {
       type: Number,
@@ -77,11 +79,32 @@ paiementSchema.pre("validate", async function (next) {
 });
 paiementSchema.pre("save", async function (next) {
   const professeur = await Professeur.findById(this.professeur);
-
   this.enseignant = professeur.nom + " " + professeur.prenom;
+  const filter = {
+    date: { $gte: this.fromDate, $lte: this.toDate },
+    professeur: this.professeur,
+    isSigned: "effectué",
+    isPaid: "en attente",
+  };
+  await Cours.updateMany(filter, {
+    $set: { isPaid: "préparé" },
+  });
 
   next();
 });
+/* paiementSchema.post("findOneAndUpdate", async function (paiement, next) {
+  const filter = {
+    date: { $gte: paiement.fromDate, $lte: paiement.toDate },
+    professeur: paiement.professeur,
+    isSigned: "effectué",
+    isPaid: "en attente",
+  };
+  await Cours.updateMany(filter, {
+    $set: { isPaid: "préparé" },
+  });
+
+  next();
+}); */
 paiementSchema.post("save", async function (paiement, next) {
   const professeur = await Professeur.findById(paiement.professeur);
   const message = `Nouvelle facture de  paiement non  validée ? Connectez-vous a votre compte et  validez la facture .\n`;

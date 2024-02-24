@@ -201,7 +201,9 @@ professeurSchema.methods.DetailNBH_TH_Nbc_Somme = async function (debit, fin) {
       },
     },
   ]).sort({ date: 1 });
-  let date_info = await professeur.getDebitDate_FinDate(debit, fin);
+  let date_info = professeur
+    ? await professeur.getDebitDate_FinDate(debit, fin)
+    : {};
   let data = {
     cours,
     date: date_info,
@@ -315,5 +317,24 @@ professeurSchema.methods.getEmplois = async function () {
   });
 
   return emplois_temp;
+};
+/* ------------------------------------------------------------CREATE PAIEMENT ---------------------------- */
+professeurSchema.methods.getPaiementData = async function (from, to) {
+  const professeur = await this.constructor.findById(this._id);
+  let prof_detail = await professeur.DetailNBH_TH_Nbc_Somme(from, to);
+  let data = prof_detail.cours[0].total[0];
+  if (data) {
+    let dt = {
+      professeur: professeur._id,
+      fromDate: prof_detail.date.debit,
+      toDate: prof_detail.date.fin,
+      totalMontant: data.SOMME,
+      nbc: data.NBC,
+      nbh: data.NBH,
+      th: data.TH,
+    };
+    //console.log(dt);
+    return dt;
+  }
 };
 module.exports = mongoose.model("Professeur", professeurSchema);

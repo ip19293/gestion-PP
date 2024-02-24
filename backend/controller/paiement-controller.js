@@ -4,6 +4,7 @@ const Cours = require("../models/cours");
 const Professeur = require("../models/professeur");
 const catchAsync = require("../utils/catchAsync");
 const AppError = require("../utils/appError");
+const professeur = require("../models/professeur");
 const filterOb = (obj, ...allowedFields) => {
   const newObj = {};
   Object.keys(obj).forEach((el) => {
@@ -64,7 +65,7 @@ exports.addPaiement = catchAsync(async (req, res, next) => {
     );
   }
   const paiement = await Paiement.create(data);
-  const filter = {
+  /*  const filter = {
     date: { $gte: req.body.fromDate, $lte: req.body.toDate },
     professeur: data.professeur,
     isSigned: "effectué",
@@ -72,7 +73,7 @@ exports.addPaiement = catchAsync(async (req, res, next) => {
   };
   let up_cours = await Cours.updateMany(filter, {
     $set: { isPaid: "préparé" },
-  });
+  }); */
 
   res.status(200).json({
     status: "success",
@@ -80,11 +81,45 @@ exports.addPaiement = catchAsync(async (req, res, next) => {
     paiement,
   });
 });
+// 4) Create many paiements ---------------------------------------------------------------------------------------
+exports.addManyPaiements = catchAsync(async (req, res, next) => {
+  const data = req.body.ids;
+  let message = "";
+  const professeurs =
+    data == undefined
+      ? await Professeur.find({ nbc: { $gte: 1 } })
+      : await Professeur.find({
+          nbc: { $gte: 1 },
+          _id: { $in: data },
+        });
+  for (elem of professeurs) {
+    let dt = await elem.getPaiementData(req.body.debit, req.body.fin);
+    if (!dt) message = `Certaines factures existe ou pas de solde `;
+    try {
+      let paiement = await Paiement.create(dt);
+      if (paiement) {
+        message =
+          message === ""
+            ? `Les factures de paiement sont crée et envoié vers les professeurs corespondant`
+            : message +
+              " certaines factures de paiement sont crée et envoié vers les professeurs corespondant";
+      }
+      /*    if (!paiement) {
+        message = `, Sauf pour certaines factures qui ne sont valide`;
+      } */
+    } catch (error) {}
+  }
+
+  res.status(200).json({
+    status: "success",
+    message,
+  });
+});
 // 4) Edit a paiement
 exports.updatePaiement = catchAsync(async (req, res, next) => {
   const id = req.params.id;
   const data = req.body;
-  const paiement_prof = await Paiement.findOne({
+  /*   const paiement_prof = await Paiement.findOne({
     _id: { $ne: id },
     professeur: req.body.professeur,
     fromDate: req.body.fromDate,
@@ -97,8 +132,8 @@ exports.updatePaiement = catchAsync(async (req, res, next) => {
         404
       )
     );
-  }
-  const paiement = await Paiement.findByIdAndUpdate(id, data, {
+  } */
+  const paiement = await Paiement.findOneAndUpdate({ _id: id }, data, {
     new: true,
     runValidators: true,
   });

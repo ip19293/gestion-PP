@@ -256,7 +256,7 @@ exports.getProfesseurById = catchAsync(async (req, res, next) => {
   let lundi = emplois[0];
   /*   "2024-02-20T13:36:43.076Z",
     "2024-02-21T13:36:43.076Z" */
-
+  await Oldprofesseur.getPaiementData();
   res.status(200).json({
     status: "succés",
     lundi,
