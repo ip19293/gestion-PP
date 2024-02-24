@@ -17,6 +17,7 @@ const paiementSchema = mongoose.Schema(
     toDate: {
       type: Date,
       select: true,
+      required: true,
     },
     professeur: {
       type: mongoose.Schema.ObjectId,
@@ -27,18 +28,22 @@ const paiementSchema = mongoose.Schema(
     nbh: {
       type: Number,
       select: true,
+      required: [true, "Le nombre d'heures est requis !"],
     },
     th: {
       type: Number,
       select: true,
+      required: [true, "Le taux houreux est requis !"],
     },
     nbc: {
       type: Number,
       select: true,
+      required: [true, "Le nombre de cours est requis !"],
     },
     totalMontant: {
       type: Number,
       select: true,
+      required: [true, "Le total montant est requis !"],
     },
     status: {
       type: String,

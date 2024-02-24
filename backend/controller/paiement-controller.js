@@ -101,8 +101,7 @@ exports.addManyPaiements = catchAsync(async (req, res, next) => {
         message =
           message === ""
             ? `Les factures de paiement sont crée et envoié vers les professeurs corespondant`
-            : message +
-              " certaines factures de paiement sont crée et envoié vers les professeurs corespondant";
+            : " Certaines factures de paiement sont crée et envoié vers les professeurs corespondant";
       }
       /*    if (!paiement) {
         message = `, Sauf pour certaines factures qui ne sont valide`;
