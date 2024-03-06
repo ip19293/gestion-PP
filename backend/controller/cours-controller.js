@@ -11,16 +11,12 @@ exports.getCours = catchAsync(async (req, res, next) => {
   let filter = {};
   if (req.params.id) filter = { cours: req.params.id };
   //EXECUTE QUERY
-  const features = new APIFeatures(
-    Cours.find(filter),
-
-    req.query
-  )
+  const features = new APIFeatures(Cours.find(filter), req.query)
     .filter()
     .sort()
     .limitFields()
     .pagination();
-  const cours = await Cours.find({});
+  const cours = await await features.query;
 
   /*   
 let cours = [];
@@ -63,10 +59,10 @@ exports.getOneCours = catchAsync(async (req, res, next) => {
       new AppError("Aucune cours trouvée avec cet identifiant !", 404)
     );
   }
-  let cours_info = await cours.getInformation();
+
   res.status(200).json({
     status: "succès",
-    cours_info,
+    cours,
   });
 });
 

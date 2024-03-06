@@ -1,6 +1,7 @@
 const mongoose = require("mongoose");
 const Categorie = require("./categorie");
 const Matiere = require("./matiere");
+const APIFeatures = require("../utils/apiFeatures");
 const filiereSchema = mongoose.Schema({
   name: { type: String, required: true, lowercase: true },
   niveau: {
@@ -47,7 +48,7 @@ filiereSchema.methods.getPeriodePlace = function () {
   }
   return [periode, place];
 };
-filiereSchema.methods.getEmplois = async function () {
+filiereSchema.methods.getEmplois = async function (query) {
   const Emploi = require("./emploi");
   const daysOfWeek = [
     "lundi",
@@ -59,6 +60,11 @@ filiereSchema.methods.getEmplois = async function () {
     "dimanche",
   ];
   let emplois_temp = [];
+  /*   const features = new APIFeatures(Emploi.find(), query)
+    .filter()
+    .sort()
+    .limitFields()
+    .pagination(); */
   const emplois = await Emploi.aggregate([
     {
       $match: {

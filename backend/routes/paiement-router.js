@@ -21,6 +21,13 @@ paiementRouter
     authController.restricTo("admin"),
     paiementController.addManyPaiements
   );
+paiementRouter
+  .route("/information")
+  .post(
+    authController.protect,
+    authController.restricTo("admin"),
+    paiementController.getInformation
+  );
 
 paiementRouter
   .route("/:id")

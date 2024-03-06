@@ -128,11 +128,6 @@ paiementSchema.post("save", async function (paiement, next) {
 });
 /* ===========================================================================================METHODS ========================= */
 
-paiementSchema.methods.getDetail = async function () {
-  const professeur = await Professeur.findById(this.professeur);
-  let debit = new Date(req.body.debit);
-  let fin = new Date(req.body.fin);
-};
 paiementSchema.methods.setConfirmation = function (value) {
   this.confirmation = value;
 };

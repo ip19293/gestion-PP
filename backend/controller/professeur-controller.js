@@ -6,6 +6,7 @@ const AppError = require("../utils/appError");
 const Cours = require("../models/cours");
 const professeur = require("../models/professeur");
 const User = require("../auth/models/user");
+/* ------------------------------------------------get all professeurs ------------------------------------------------ */
 exports.getProfesseurs = catchAsync(async (req, res, next) => {
   let filter = {};
   if (req.params.id) filter = { cours: req.params.id };
@@ -15,27 +16,6 @@ exports.getProfesseurs = catchAsync(async (req, res, next) => {
     .limitFields()
     .pagination();
   const professeurs = await features.query;
-
-  /* for (let x of professeurs_list) {
-    let prof_info = await x.getInfo_Nbh_TH_Nbc_Somme();
-    if (prof_info[0]) {
-      let data = {
-        _id: x._id,
-        nom: prof_info[1],
-        prenom: prof_info[2],
-        email: prof_info[3],
-        mobile: prof_info[4],
-        banque: prof_info[5],
-        accountNumero: prof_info[6],
-        nbh: prof_info[7],
-        th: prof_info[8],
-        nbc: prof_info[9],
-        somme: prof_info[10],
-      };
-      professeurs.push(data);
-    }
-  } */
-
   res.status(200).json({
     status: "succés",
     professeurs,

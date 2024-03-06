@@ -9,12 +9,7 @@ const Matiere = require("../models/matiere");
 exports.getFilieres = catchAsync(async (req, res, next) => {
   let filter = {};
   if (req.params.id) filter = { cours: req.params.id };
-  const features = new APIFeatures(
-    Filiere.find(),
-    /* .populate({
-      path: "categorie",
-    }) */ req.query
-  )
+  const features = new APIFeatures(Filiere.find(), req.query)
     .filter()
     .sort()
     .limitFields()
@@ -115,7 +110,7 @@ exports.getFiliere = catchAsync(async (req, res, next) => {
   }
   res.status(200).json({
     status: "succès",
-    emplois,
+    //emplois,
     filiere_info,
     filiere,
   });
@@ -184,8 +179,13 @@ exports.getFiliereEmplois = catchAsync(async (req, res, next) => {
       new AppError("La filière avec cet identifiant introuvable !", 404)
     );
   }
-  /*   let emplois = await filiere.getEmplois(); */
-  let emplois = await Emploi.find({ filiere: id });
+  //let emplois = await filiere.getEmplois();
+  const features = new APIFeatures(Emploi.find(), req.query)
+    .filter()
+    .sort()
+    .limitFields()
+    .pagination();
+  let emplois = await features.query;
   res.status(200).json({
     status: "succès",
     _id: filiere._id,

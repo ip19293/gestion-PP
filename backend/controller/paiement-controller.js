@@ -81,6 +81,61 @@ exports.addPaiement = catchAsync(async (req, res, next) => {
     paiement,
   });
 });
+// 4) Get payement informatiom ---------------------------------------------------------------------------------------
+exports.getInformation = catchAsync(async (req, res, next) => {
+  const professeurs = await Professeur.find({ nbc: { $gte: 1 } });
+  let query =
+    req.body.debit !== undefined && req.body.fin !== undefined
+      ? {
+          date: { $gte: req.body.debit, $lte: req.body.fin },
+          isSigned: "effectué",
+          isPaid: "en attente",
+        }
+      : { isSigned: "effectué", isPaid: "en attente" };
+  let firstCours = await Cours.findOne(query).sort({
+    date: 1,
+  });
+  let lastCours = await Cours.findOne(query).sort({
+    date: -1,
+  });
+  let firstCoursDate = firstCours.date;
+  let lastCoursDate = lastCours.date;
+  const diffenceMs = lastCoursDate.getTime() - firstCoursDate.getTime();
+  let daysDifference = diffenceMs / (1000 * 60 * 60 * 24);
+  const monthDifference = Math.floor(daysDifference / 30.44);
+  const remainingDaysAfterMonths = daysDifference % 30.44;
+  const remainingWeeksAfterMonths = Math.floor(remainingDaysAfterMonths / 7);
+  const remainingDaysAfterWeeks = remainingDaysAfterMonths % 7;
+  let nombresProfesseurs = 0;
+  let somme = 0;
+  let nbc = 0;
+  for (elem of professeurs) {
+    let prof_detail = await elem.DetailNBH_TH_Nbc_Somme(
+      req.body.debit,
+      req.body.fin
+    );
+    let data = prof_detail.cours[0].total[0];
+    if (data) {
+      nombresProfesseurs = nombresProfesseurs + 1;
+      somme = somme + data.SOMME;
+      nbc = nbc + data.NBC;
+    }
+  }
+  let info = {
+    firstCoursDate,
+    lastCoursDate,
+    month: monthDifference,
+    weeks: remainingWeeksAfterMonths,
+    days: remainingDaysAfterWeeks,
+    nombresProfesseurs,
+    somme,
+    nbc,
+  };
+  res.status(200).json({
+    status: "success",
+    info,
+  });
+});
 // 4) Create many paiements ---------------------------------------------------------------------------------------
 exports.addManyPaiements = catchAsync(async (req, res, next) => {
   const data = req.body.ids;
