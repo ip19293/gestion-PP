@@ -98,8 +98,8 @@ exports.getInformation = catchAsync(async (req, res, next) => {
   let lastCours = await Cours.findOne(query).sort({
     date: -1,
   });
-  let firstCoursDate = firstCours.date;
-  let lastCoursDate = lastCours.date;
+  let firstCoursDate = firstCours ? firstCours.date : new Date();
+  let lastCoursDate = lastCours ? lastCours.date : new Date();
   const diffenceMs = lastCoursDate.getTime() - firstCoursDate.getTime();
   let daysDifference = diffenceMs / (1000 * 60 * 60 * 24);
   const monthDifference = Math.floor(daysDifference / 30.44);
@@ -122,9 +122,9 @@ exports.getInformation = catchAsync(async (req, res, next) => {
     }
   }
   let info = {
-    firstCoursDate,
-    lastCoursDate,
-    month: monthDifference,
+    fromDate: firstCoursDate,
+    toDate: lastCoursDate,
+    months: monthDifference,
     weeks: remainingWeeksAfterMonths,
     days: remainingDaysAfterWeeks,
     nombresProfesseurs,
