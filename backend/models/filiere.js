@@ -1,7 +1,4 @@
 const mongoose = require("mongoose");
-const Categorie = require("./categorie");
-const Matiere = require("./matiere");
-const APIFeatures = require("../utils/apiFeatures");
 const filiereSchema = mongoose.Schema({
   name: { type: String, required: true, lowercase: true },
   niveau: {
@@ -11,7 +8,6 @@ const filiereSchema = mongoose.Schema({
   },
   description: {
     type: String,
-    default: "",
   },
   isPaireSemestre: {
     type: Boolean,
@@ -34,7 +30,31 @@ const filiereSchema = mongoose.Schema({
     },
   }, */
 });
-
+//SAVE MIDLWERED ----------------------------------------------------------------------------------
+filiereSchema.pre("save", async function (next) {
+  //gernerate description from name
+  let description = "";
+  let name_part = this.name.split(" ");
+  if (!name_part[1]) {
+    description = name_part[0].substr(0, 3).toLocaleUpperCase();
+  } else if (name_part[1] && !name_part[2]) {
+    description =
+      name_part[0].substr(0, 2).toLocaleUpperCase() +
+      name_part[1].substr(0, 1).toLocaleUpperCase();
+  } else {
+    name_part.forEach((element) => {
+      description = description + element.substr(0, 1).toLocaleUpperCase();
+    });
+  }
+  try {
+    this.description =
+      this.niveau.substr(0, 1).toLocaleUpperCase() + description;
+  } catch (error) {
+    console.log(error.message);
+  }
+  next();
+});
+//GET PERIODE AND PLACE OF FILIERE --------------------------------------------------------------------
 filiereSchema.methods.getPeriodePlace = function () {
   let periode = 0;
   let niveaus = ["licence", "master", "doctorat"];
@@ -48,7 +68,7 @@ filiereSchema.methods.getPeriodePlace = function () {
   }
   return [periode, place];
 };
-filiereSchema.methods.getEmplois = async function (query) {
+filiereSchema.methods.getEmplois = async function () {
   const Emploi = require("./emploi");
   const daysOfWeek = [
     "lundi",
@@ -65,6 +85,11 @@ filiereSchema.methods.getEmplois = async function (query) {
     .sort()
     .limitFields()
     .pagination(); */
+  const emo = Emploi.aggregate([
+    {
+      $unwind: "$semestre",
+    },
+  ]);
   const emplois = await Emploi.aggregate([
     {
       $match: {
@@ -120,18 +145,10 @@ filiereSchema.methods.getEmplois = async function (query) {
 filiereSchema.post("findOneAndDelete", async function (filiere, message) {
   console.log(" filiere remove midleweere work ....................");
   const Emploi = require("./emploi");
-
-  let groups = [];
-  let emplois = [];
-
-  for (x of groups) {
-    let emploi = await Emploi.deleteMany({ semestre: x._id });
-    if (emploi) {
-      emplois.push(emploi);
-    }
-  }
-
-  message = `La filière ${filiere.niveau} ${filiere.name} avec  ${semestres.length} semestres, ${groups.length} groups et ${emplois.length} cours d'emploi du temps est supprimé !`;
+  const Element = require("./element");
+  const elements = await Element.deleteMany({ filiere: filiere._id });
+  //await Emploi.deleteMany({ filiere: filiere._id });
+  message = `La filière ${filiere.niveau} ${filiere.name} avec  ${elements.deletedCount} elements et d'emploi du temps est supprimé !`;
   filiere.name = message;
   console.log(message);
 });

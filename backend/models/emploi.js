@@ -1,6 +1,5 @@
 const mongoose = require("mongoose");
 const Professeur = require("./professeur");
-const Matiere = require("./matiere");
 const Element = require("./element");
 const Filiere = require("./filiere");
 const AppError = require("../utils/appError");
@@ -146,14 +145,7 @@ emploiSchema.methods.getProfesseurMatiere = async function () {
   let type = element["professeur" + this.type];
   let professeur = await Professeur.findById(type);
   let prof_info = await professeur.getInformation();
-  const matiere = await Matiere.findById(element.matiere);
-  let res = [
-    prof_info[0],
-    prof_info[1],
-    prof_info[2],
-    matiere._id,
-    matiere.name,
-  ];
+  let res = [prof_info[0], prof_info[1], prof_info[2]];
 
   return res;
 };

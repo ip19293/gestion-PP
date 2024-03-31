@@ -119,66 +119,18 @@ exports.updateUser = catchAsync(async (req, res, next) => {
   const id = req.params.id;
   const fileName = req.file != undefined ? req.file.filename : "";
   const basePath = `${req.protocol}://${req.get("host")}/uploads/images/`;
-  /* 
-  const data = {
-    nom: req.body.nom,
-    prenom: req.body.prenom,
-    mobile: req.body.mobile,
-    email: req.body.email,
-    banque: req.body.banque,
-    photo: fileName != "" ? `${basePath}${fileName}` : undefined,
-    accountNumero: req.body.accountNumero,
-  };
-  let professeur = {};
 
-  const user = await User.findByIdAndUpdate(id, data, {
-    new: true,
-    runValidators: true,
-  });
-
-  if (!user) {
-    return next(new AppError("Aucun utilisateur trouvé avec cet ID", 404));
-  } */
-  /*   user.nom = req.body.nom;
-  user.prenom = req.body.prenom;
-  user.mobile = req.body.mobile;
-  user.email = req.body.email;
-  user.banque = req.body.banque;
-  user.photo = req.file != undefined ? `${basePath}${fileName}` : user.photo;
-  user.accountNumero = req.body.accountNumero;
-  await user.save(); */
-  // user.set("accountNumero", 3456712893);
-  /*   user.prenom = req.body.prenom != undefined ? req.body.prenom : user.prenom;
-  user.nom = req.body.nom != undefined ? req.body.nom : user.nom;
-  user.mobile = req.body.mobile != undefined ? req.body.mobile : user.mobile;
-  user.email = req.body.email != undefined ? req.body.email : user.email;
-  user.banque = req.body.banque != undefined ? req.body.banque : user.banque;
-  user.photo = req.file != undefined ? `${basePath}${fileName}` : user.photo;
-  user.accountNumero =
-    req.body.accountNumero != undefined
-      ? req.body.accountNumero
-      : user.accountNumero;
-
-  const oldValidateBeforeSave = User.schema.options.validateBeforeSave;
-  console.log(oldValidateBeforeSave);
-  User.schema.options.validateBeforeSave = false;
-  try {
-    await user.save();
-  } finally {
-    User.schema.options.validateBeforeSave = oldValidateBeforeSave;
-  }
- */
   const user = await User.findById(id);
   user.prenom = req.body.prenom != undefined ? req.body.prenom : user.prenom;
   user.nom = req.body.nom != undefined ? req.body.nom : user.nom;
   user.mobile = req.body.mobile != undefined ? req.body.mobile : user.mobile;
   user.email = req.body.email != undefined ? req.body.email : user.email;
-  user.banque = req.body.banque != undefined ? req.body.banque : user.banque;
   user.photo = req.file != undefined ? `${basePath}${fileName}` : user.photo;
+  /*   user.banque = req.body.banque != undefined ? req.body.banque : user.banque;
   user.accountNumero =
     req.body.accountNumero != undefined
       ? req.body.accountNumero
-      : user.accountNumero;
+      : user.accountNumero; */
   const oldValidateBeforeSave = User.schema.options.validateBeforeSave;
   console.log(oldValidateBeforeSave);
   User.schema.options.validateBeforeSave = false;

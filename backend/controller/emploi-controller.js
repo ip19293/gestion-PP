@@ -1,17 +1,14 @@
 const APIFeatures = require("../utils/apiFeatures");
 const Emploi = require("../models/emploi");
-const Cours = require("../models/cours");
 const Professeur = require("../models/professeur");
 const Element = require("../models/element");
 const Filiere = require("../models/filiere");
 const User = require("../auth/models/user");
 const Categorie = require("../models/categorie");
-const Matiere = require("../models/matiere");
 const mongoose = require("mongoose");
 const catchAsync = require("../utils/catchAsync");
 const AppError = require("../utils/appError");
 const VERIFICATION = require("./functions/verificatin");
-const filiere = require("../models/filiere");
 exports.getEmplois = catchAsync(async (req, res, next) => {
   let filter = {};
   if (req.params.id) filter = { emplois: req.params.id };
@@ -424,8 +421,8 @@ exports.uploadEmplois = catchAsync(async (req, res, next) => {
                 categorie: newCategorie._id,
                 name: data.matiere,
               };
-              const matiere = new Matiere(dataM);
-              await matiere.save();
+              // const matiere = new Matiere(dataM);
+              // await matiere.save();
               await Professeur.updateOne(
                 {
                   _id: Oldprofesseur._id,

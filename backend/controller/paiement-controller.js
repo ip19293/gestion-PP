@@ -16,7 +16,7 @@ const filterOb = (obj, ...allowedFields) => {
 /*  1)============================= get All paiement ======================================================*/
 exports.getPaiements = catchAsync(async (req, res, next) => {
   const features = new APIFeatures(Paiement.find(), req.query);
-  const paiements = await features.query;
+  const paiements = await features.query.populate({ path: "professeur" });
 
   /* for (elem of paiements_list) {
     let professeur = await Professeur.findById(elem.professeur);
@@ -205,23 +205,26 @@ exports.updatePaiement = catchAsync(async (req, res, next) => {
 
 exports.deletePaiement = catchAsync(async (req, res, next) => {
   const id = req.params.id;
-  const paiement = await Paiement.findById(id);
+  /*   const paiement = await Paiement.findById(id);
 
   if (!paiement) {
     return next(
       new AppError("Aucun object trouvé avec cet identifiant !", 404)
     );
-  }
+  } */
   const filter = {
     date: { $gte: paiement.fromDate, $lte: paiement.toDate },
     professeur: paiement.professeur,
     isSigned: "effectué",
     isPaid: "préparé",
   };
-  let up_cours = await Cours.updateMany(filter, {
-    $set: { isPaid: "en attente" },
-  });
+
   const deleted_paiement = await Paiement.findOneAndDelete({ _id: id });
+  if (deleted_paiement) {
+    await Cours.updateMany(filter, {
+      $set: { isPaid: "en attente" },
+    });
+  }
   res.status(200).json({
     status: "success",
     message: `Le paiement est suprimé avec succéss`,

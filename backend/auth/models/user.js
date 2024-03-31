@@ -17,8 +17,8 @@ const userSchema = mongoose.Schema({
 
   mobile: {
     type: Number,
-    /*     required: [true, "Le numéro de téléphone est reauis !"], */
-    /*    unique: true, */
+    required: [true, "Le numéro de téléphone est reauis !"],
+    unique: true,
   },
   email: {
     type: String,
@@ -52,23 +52,7 @@ const userSchema = mongoose.Schema({
       message: "Les mots de passe ne sont pas les mèmes !!!",
     },
   },
-  banque: {
-    type: String,
-    /*   required: true, */
-    default: "BMCI",
-  },
 
-  accountNumero: {
-    type: Number,
-    /*    unique: true, */
-    /*   required: true, */
-    validate: {
-      validator: function (value) {
-        return value.toString().length === 10;
-      },
-      message: "Le numéro de compte doit avoir une longueur de 10 chiffres !",
-    },
-  },
   passwordChangedAt: Date,
   passwordResetToken: String,
   passwordResetExpires: Date,
@@ -79,20 +63,22 @@ const userSchema = mongoose.Schema({
   },
 });
 
-userSchema.post("save", async function () {
+userSchema.post("save", async function (user, next) {
   const Professeur = require("../../models/professeur");
-  const professeur = await Professeur.findOne({ user: this._id });
+  const Cours = require("../../models/professeur");
+  const professeur = await Professeur.findOne({ user: user._id });
   if (professeur) {
-    professeur.nom = this.nom;
-    professeur.prenom = this.prenom;
-    professeur.email = this.email;
-    professeur.info.mobile = this.mobile;
-    professeur.info.banque = this.banque;
-    professeur.info.accountNumero = this.accountNumero;
+    professeur.nom = user.nom;
+    professeur.prenom = user.prenom;
     await professeur.save();
+    await Cours.updateMany(
+      {
+        professeur: professeur._id,
+      },
+      { enseignant: user.nom + " " + user.prenom }
+    );
   }
-
-  // next();
+  next();
 });
 userSchema.pre("save", function (next) {
   if (!this.isModified("password") || this.isNew) return next();

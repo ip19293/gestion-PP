@@ -1,10 +1,7 @@
 const APIFeatures = require("../utils/apiFeatures");
-const Professeur = require("../models/professeur");
-const Matiere = require("../models/matiere");
+
 const Emploi = require("../models/emploi");
 const Cours = require("../models/cours");
-const catchAsync = require("../utils/catchAsync");
-const AppError = require("../utils/appError");
 const VERIFICATION = require("./functions/verificatin");
 const cron = require("node-cron");
 /* ---------------------auto create cours from emplois ---------------------------------- */

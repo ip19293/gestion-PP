@@ -25,6 +25,6 @@ router
     authController.restricTo("admin", "responsable"),
     categorieController.updateCategorie
   );
-router.route("/:id/matieres").get(categorieController.getCategorieMatieres);
+router.route("/:id/matieres").get(categorieController.getCategorieElements);
 
 module.exports = router;

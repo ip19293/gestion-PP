@@ -1,6 +1,6 @@
 const APIFeatures = require("../utils/apiFeatures");
 const Categorie = require("../models/categorie");
-const Matiere = require("../models/matiere");
+const Element = require("../models/element");
 const catchAsync = require("../utils/catchAsync");
 const AppError = require("../utils/appError");
 const filterOb = (obj, ...allowedFields) => {
@@ -13,21 +13,14 @@ const filterOb = (obj, ...allowedFields) => {
 };
 /*  1)============================= get All Categorie ======================================================*/
 exports.getCategories = catchAsync(async (req, res, next) => {
-  const features = new APIFeatures(Categorie.find(), req.query);
-  const categories_list = await features.query;
-  let categories = [];
-  for (elem of categories_list) {
-    let categorie_info = await elem.getCodeNbmatieres();
-    let data = {
-      _id: elem._id,
-      name: elem.name,
-      description: elem.description,
-      prix: elem.prix,
-      code: categorie_info[0],
-      nb_matieres: categorie_info[1],
-    };
-    categories.push(data);
-  }
+  let filter = {};
+  if (req.params.id) filter = { cours: req.params.id };
+  const features = new APIFeatures(Categorie.find(), req.query)
+    .filter()
+    .sort()
+    .limitFields()
+    .pagination();
+  const categories = await features.query;
   res.status(200).json({
     status: "succès",
     categories,
@@ -115,16 +108,16 @@ exports.getCategorieById = catchAsync(async (req, res, next) => {
     categorie,
   });
 });
-//Get Categorie matieres
-exports.getCategorieMatieres = catchAsync(async (req, res, next) => {
+//Get Categorie elements
+exports.getCategorieElements = catchAsync(async (req, res, next) => {
   const id = req.params.id;
-  const matieres = await Matiere.find({
+  const elements = await Element.find({
     categorie: id,
   });
 
   res.status(200).json({
     status: "succès",
-    matieres,
+    elements,
   });
 });
 /* -----------------------------------------------------FONCTIONS------------------------ */

@@ -31,12 +31,17 @@ elementRouter
   .get(authController.protect, elementController.getElement)
   .patch(authController.protect, elementController.updateElement);
 elementRouter
+  .route("/categorie/:id")
+  .get(
+    authController.protect,
+    authController.restricTo("admin", "responsable"),
+    elementController.getElementsByCategorieId,
+    elementController.getElements
+  );
+elementRouter
   .route("/:id/professeurs")
   .patch(authController.protect, elementController.addProfesseurToElements);
 
-elementRouter
-  .route("/:id/groups")
-  .get(authController.protect, elementController.getGroupsByElementId);
 elementRouter
   .route("/upload/:id")
   .post(

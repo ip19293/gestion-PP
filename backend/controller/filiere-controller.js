@@ -4,7 +4,6 @@ const Element = require("../models/element");
 const catchAsync = require("../utils/catchAsync");
 const AppError = require("../utils/appError");
 const Emploi = require("../models/emploi");
-const Matiere = require("../models/matiere");
 
 exports.getFilieres = catchAsync(async (req, res, next) => {
   let filter = {};

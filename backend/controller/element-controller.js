@@ -3,47 +3,18 @@ const Element = require("../models/element");
 const catchAsync = require("../utils/catchAsync");
 const AppError = require("../utils/appError");
 const Professeur = require("../models/professeur");
-const Matiere = require("../models/matiere");
+const Categorie = require("../models/categorie");
 const Filiere = require("../models/filiere");
 const User = require("../auth/models/user");
 exports.getElements = catchAsync(async (req, res, next) => {
   let filter = {};
   if (req.params.id) filter = { cours: req.params.id };
-  const features = new APIFeatures(
-    Element.find(),
-    /* .populate({
-      path: "categorie",
-    }) */ req.query
-  )
+  const features = new APIFeatures(Element.find(), req.query)
     .filter()
     .sort()
     .limitFields()
     .pagination();
-  const elements_list = await features.query;
-  let elements = [];
-  for (x of elements_list) {
-    let matiere = await Matiere.findById(x.matiere);
-    let matiere_info = await matiere.getCodePrixCNameCCode();
-    let element_info = await x.getFiliere_Matiere();
-    //let element_profs = await x.getProfCM_ProfTP_ProfTD();
-    let data = {
-      _id: x._id,
-      semestre: x.semestre,
-      matiere: x.matiere,
-      filiere: x.filiere,
-      heuresCM: x.heuresCM,
-      heuresTP: x.heuresTP,
-      heuresTD: x.heuresTD,
-      code: matiere_info[0],
-      taux: matiere_info[1],
-      filiere_name: element_info[0].name,
-      matiere_mane: element_info[1].name,
-      /*       professeurCM: element_profs[0],
-      professeurTP: element_profs[1],
-      professeurTD: element_profs[2], */
-    };
-    elements.push(data);
-  }
+  const elements = await features.query;
 
   res.status(200).json({
     status: "succés",
@@ -51,14 +22,13 @@ exports.getElements = catchAsync(async (req, res, next) => {
   });
 });
 
-/* =================================================================ADD ============================ */
+//ADD ELEMENT ===========================================================================
 exports.addElement = catchAsync(async (req, res, next) => {
   const data = req.body;
-  const matiere = await Matiere.findById(req.body.matiere);
-
-  if (!matiere) {
+  const categorie = await Categorie.findById(req.body.categorie);
+  if (!categorie) {
     return next(
-      new AppError("Aucune matiére trouvée avec cet identifiant !", 404)
+      new AppError("Aucune categorie trouvée avec cet identifiant !", 404)
     );
   }
   const filiere = await Filiere.findById(req.body.filiere);
@@ -70,85 +40,62 @@ exports.addElement = catchAsync(async (req, res, next) => {
   const OldElement = await Element.findOne({
     filiere: req.body.filiere,
     semestre: req.body.semestre,
-    matiere: req.body.matiere,
+    name: req.body.name,
   });
   if (OldElement) {
     return next(new AppError("L'element existe déja !", 404));
   }
-  let TD =
-    req.body.professeurTD === undefined || req.body.professeurTD === ""
-      ? undefined
-      : req.body.professeurTD;
-  let CM =
-    req.body.professeurCM === undefined || req.body.professeurCM === ""
-      ? undefined
-      : req.body.professeurCM;
-  let TP =
-    req.body.professeurTP === undefined || req.body.professeurTP === ""
-      ? undefined
-      : req.body.professeurTP;
-  const element = await Element.create({
-    matiere: req.body.matiere,
-    semestre: req.body.semestre,
-    filiere: req.body.filiere,
-    professeurCM: CM,
-    professeurTD: TD,
-    professeurTP: TP,
-    heuresCM: req.body.heuresCM,
-    heuresTP: req.body.heuresTP,
-    heuresTD: req.body.heuresTD,
-  });
+  const element = await Element.create(data);
   res.status(200).json({
     status: "succés",
     message: "La matière est ajouté avec succés .",
     element: element,
   });
 });
-/* ======================================================================EDIT ========================= */
+//EDIT ELEMENT ==============================================================================
 exports.updateElement = catchAsync(async (req, res, next) => {
   const id = req.params.id;
   const element = await Element.findById(id);
-  const matiere = await Matiere.findById(req.body.matiere);
   if (!element) {
     return next(
       new AppError("Aucune element trouvée avec cet identifiant !", 404)
     );
   }
 
-  if (!matiere) {
-    return next(
-      new AppError("Aucune matiére trouvée avec cet identifiant !", 404)
-    );
-  }
-  const filiere = await Filiere.findById(req.body.filiere);
-  if (!filiere) {
-    return next(
-      new AppError("Aucune filiere trouvée avec cet identifiant !", 404)
-    );
-  }
   const OldElement = await Element.findOne({
     semestre: req.body.semestre,
     filiere: req.body.filiere,
-    matiere: req.body.matiere,
+    name: req.body.name,
   });
   if (OldElement && !OldElement._id.equals(id)) {
     return next(new AppError("L'element existe déja !", 404));
   }
 
-  element.semestre = req.body.semestre;
-  element.matiere = req.body.matiere;
-  element.professeurCM = req.body.professeurCM;
-  element.professeurTD = req.body.professeurTD;
-  element.professeurTP = req.body.professeurTP;
-  /*   element.professeurCM =
-    req.body.professeurCM != "" ? req.body.professeurCM : undefined;
+  element.semestre =
+    req.body.semestre != undefined ? req.body.semestre : element.semestre;
+  element.name = req.body.name != undefined ? req.body.name : element.name;
+  element.categorie =
+    req.body.categorie != undefined ? req.body.categorie : element.categorie;
+  element.filiere =
+    req.body.filiere != undefined ? req.body.filiere : element.filiere;
+  element.professeurCM =
+    req.body.professeurCM != undefined
+      ? req.body.professeurCM
+      : element.professeurCM;
   element.professeurTD =
-    req.body.professeurTD != "" ? req.body.professeurTD : undefined;
+    req.body.professeurTD != undefined
+      ? req.body.professeurTD
+      : element.professeurTD;
   element.professeurTP =
-    req.body.professeurTP != "" ? req.body.professeurTP : undefined; */
-  element.heuresCM = req.body.heuresCM;
-  element.heuresTD = req.body.heuresTD;
-  element.heuresTP = req.body.heuresTP;
+    req.body.professeurTP != undefined
+      ? req.body.professeurTP
+      : element.professeurTP;
+  element.heuresCM =
+    req.body.heuresCM != undefined ? req.body.heuresCM : element.heuresCM;
+  element.heuresTD =
+    req.body.heuresTD != undefined ? req.body.heuresTD : element.heuresTD;
+  element.heuresTP =
+    req.body.heuresTP != undefined ? req.body.heuresTP : element.heuresTP;
   await element.save();
   res.status(201).json({
     status: "succés",
@@ -156,7 +103,7 @@ exports.updateElement = catchAsync(async (req, res, next) => {
     element,
   });
 });
-
+//REMOVE ELEMENT =======================================================================
 exports.deleteElement = catchAsync(async (req, res, next) => {
   const id = req.params.id;
   const element = await Element.findOneAndDelete({ _id: id });
@@ -167,40 +114,25 @@ exports.deleteElement = catchAsync(async (req, res, next) => {
   }
   res.status(200).json({
     status: "succés",
-    message: ``,
+    message: `L'element est supprimé avec succés .`,
   });
 });
 exports.getElement = catchAsync(async (req, res, next) => {
   const id = req.params.id;
   const element = await Element.findById(id);
-  let prix = await element.getPrix();
-  if (!element) {
-    return next(
-      new AppError("Aucune matière trouvée avec cet identifiant !", 404)
-    );
-  }
-  res.status(200).json({
-    status: "succés",
-    //element: element,
-    prix,
-  });
-});
-exports.getGroupsByElementId = catchAsync(async (req, res, next) => {
-  const id = req.params.id;
-  const element = await Element.findById(id);
-  if (!element) {
-    return next(
-      new AppError("Aucune matière trouvée avec cet identifiant !", 404)
-    );
-  }
-  const groupes = await Group.find({ semestre: element.semestre });
 
+  if (!element) {
+    return next(
+      new AppError("Aucune matière trouvée avec cet identifiant !", 404)
+    );
+  }
   res.status(200).json({
     status: "succés",
-    groupes: groupes,
+    element: element,
   });
 });
-/* =================================================================ADD professeur to element ==================*/
+
+// ADD ELEMENT TO PROFESSEUR =====================================================================
 exports.addProfesseurToElements = catchAsync(async (req, res, next) => {
   const id = req.params.id;
   let elem = await Element.findById(id);
@@ -238,7 +170,15 @@ exports.addProfesseurToElements = catchAsync(async (req, res, next) => {
     element,
   });
 });
-//----------------------------------------------------------------------------------------------
+
+//GET ELEMENTS BY CATEGORIE---------------------------------------------------------------------
+exports.getElementsByCategorieId = catchAsync(async (req, res, next) => {
+  req.query = {
+    categorie: req.params.id,
+  };
+  next();
+});
+//  UPLOAD ELEMENTS----------------------------------------------------------------------------
 exports.uploadElements = catchAsync(async (req, res, next) => {
   const id = req.params.id;
   const XLSX = require("xlsx");
@@ -267,69 +207,110 @@ exports.uploadElements = catchAsync(async (req, res, next) => {
   /*   if (
     ["code", "CodeEM", "Code"].includes(finalJsonData[1][0]) &&
     ["nom", "Titre", "nom de la matiere"].includes(finalJsonData[1][1])
-  ) { */
-  for (const [index, x] of finalJsonData.entries()) {
-    if (x[0] == null || x[0] === "code" || x[0] === "CodeEM") {
-      console.log(x[1]);
-      if (x.length === 2) {
-        numero = parseInt(x[1].match(/\d+/)[0]);
-      }
-    } else {
-      const matiere = await Matiere.findOne({ name: x[1].toLowerCase() });
-      const element = await Element.findOne({
-        matiere: matiere._id,
-        filiere: filiere._id,
-        semestre: numero,
-      });
-      let professeurs_Total = [[], [], []];
-      for (let z = 4; z < 7; z++) {
-        let value = x[z].replace("/ ", "/");
-        let professeurs = value.split("/");
-        for (prof of professeurs) {
-          let professeur = prof.split(" ");
-          let famille = professeur[2] != undefined ? "." + professeur[2] : "";
-          let email =
-            professeur[1] != undefined
-              ? professeur[0] +
-                `.${professeur[1]}` +
-                `${famille}` +
-                "@supnum.mr"
-              : professeur[0] + `.${professeur[0]}` + "@supnum.mr";
-          email = email.toLowerCase();
-          const OldUser = await User.findOne({ email: email });
-          if (OldUser && OldUser.role === "professeur") {
-            let Oldprofesseur = await Professeur.findOne({ user: OldUser._id });
-            if (Oldprofesseur) {
-              professeurs_Total[z - 4].push(Oldprofesseur._id);
-            } else {
-              console.log("NOT existing professeurs ....................");
+  ) */ {
+    for (const [index, x] of finalJsonData.entries()) {
+      if (x[0] == null || x[0] === "code" || x[0] === "CodeEM") {
+        console.log(x[1]);
+        if (x.length === 2) {
+          numero = parseInt(x[1].match(/\d+/)[0]);
+        }
+      } else {
+        let professeurs_Total = [[], [], []];
+        for (let z = 4; z < 7; z++) {
+          //GET PROFESSEURS CM TD TP LISTE
+          let value = x[z].replace("/ ", "/");
+          let professeurs = value.split("/");
+          for (prof of professeurs) {
+            let professeur = prof.split(" ");
+            let nom = professeur[0] != undefined ? professeur[0] : "";
+            let prenom = professeur[1] != undefined ? professeur[1] : "";
+            let famille = professeur[2] != undefined ? professeur[2] : "";
+            let email =
+              famille != ""
+                ? nom + `.${prenom}` + `.${famille}` + "@supnum.mr"
+                : prenom != ""
+                ? nom + `.${prenom}` + "@supnum.mr"
+                : nom + `.${nom}` + "@supnum.mr";
+            email = email.toLowerCase();
+            const OldUser = await User.findOne({ email: email });
+            if (OldUser && OldUser.role === "professeur") {
+              let Oldprofesseur = await Professeur.findOne({
+                user: OldUser._id,
+              });
+              if (Oldprofesseur) {
+                professeurs_Total[z - 4].push(Oldprofesseur._id);
+              } else {
+                console.log("NOT existing professeurs ....................");
+              }
             }
           }
         }
-      }
-      if (matiere) {
-        let dt = {
-          matiere: matiere._id,
-          semestre: numero,
+        console.log(numero);
+        let categorieCode = x[0].substring(0, 3);
+        let categorie = await Categorie.findOne({
+          code: categorieCode,
+        });
+        let OlElement = await Element.findOne({
+          name: x[1].toLowerCase(),
           filiere: filiere._id,
-          professeurCM: professeurs_Total[0],
-          professeurTD: professeurs_Total[1],
-          professeurTP: professeurs_Total[2],
-        };
-        if (!element) {
-          try {
-            const element = await Element.create(dt);
-            //console.log(dt);
-          } catch (error) {}
-        } else {
+          semestre: numero,
+        });
+        if (OlElement) {
           console.log(
-            "ELEMENT EXSISTE BEFORE ---------------------  --------------------------"
+            "Element existe deja ---------------------------------------------------"
           );
+        } else {
+          //ADD ELEMENT TO BD
+          let dt = {
+            categorie: categorie ? categorie._id : "",
+            semestre: numero,
+            name: x[1],
+            filiere: filiere._id,
+            professeurCM: professeurs_Total[0],
+            professeurTD: professeurs_Total[1],
+            professeurTP: professeurs_Total[2],
+          };
+          // verifier si le categorie existe
+          if (categorie) {
+            try {
+              OlElement = await Element.create(dt);
+              //console.log("OK");
+            } catch (error) {
+              //console.log(error.message);
+            }
+          } else {
+            try {
+              console.log(
+                "NOUVELLE CATEGORIE --------------------------------"
+              );
+              let newCategorie = await Categorie.create({
+                name: categorieCode,
+              });
+              dt.categorie = newCategorie._id;
+
+              OlElement = await Element.create(dt);
+            } catch (error) {}
+          }
         }
-      } else {
-        console.log(
-          "NOT EXISTING MATIERE  ---------------------  --------------------------"
-        );
+        // ADD ELEMENT TO  LISTE ELEMENTS OF PROFESSEURS
+        /*    try {
+          await Professeur.updateMany(
+            {
+              $or: [
+                { _id: { $in: professeurs_Total[0] } },
+                { _id: { $in: professeurs_Total[1] } },
+                { _id: { $in: professeurs_Total[2] } },
+              ],
+            },
+            {
+              $addToSet: {
+                elements: OlElement ? OlElement._id : undefined,
+              },
+            }
+          );
+        } catch (error) {
+          console.log(error.message);
+        } */
       }
     }
   }

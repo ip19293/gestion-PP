@@ -1,25 +1,32 @@
 const mongoose = require("mongoose");
-const Matiere = require("../models/matiere");
+const Element = require("../models/element");
 const User = require("../auth/models/user");
 
 const professeurSchema = mongoose.Schema(
   {
-    matieres: [
-      {
-        type: mongoose.Schema.ObjectId,
-        ref: "Matiere",
-      },
-    ],
     user: {
       type: mongoose.Schema.ObjectId,
       ref: "User",
       unique: true,
       required: [true, "Utilisateur ID est requis !"],
     },
-    info: {
-      mobile: Number,
-      accountNumero: Number,
-      banque: String,
+    banque: {
+      type: String,
+      required: true,
+      default: "BMCI",
+    },
+    accountNumero: {
+      type: String,
+      unique: true,
+      required: true,
+      maxLength: [
+        20,
+        "Le numéro de compte doit avoir une longueur moin de 20 chiffres ",
+      ],
+      minLength: [
+        10,
+        "Le numéro de compte doit avoir une longueur  plus ou egale a 10 chiffres ",
+      ],
     },
     nbh: {
       type: Number,
@@ -39,7 +46,6 @@ const professeurSchema = mongoose.Schema(
     },
     nom: { type: String, lowercase: true },
     prenom: { type: String, lowercase: true },
-    email: { type: String, lowercase: true },
   },
 
   {
@@ -47,16 +53,24 @@ const professeurSchema = mongoose.Schema(
     toObject: { virtuals: true },
   }
 );
+//POPULATE FIND QUERY ---------------------------------------------------
+professeurSchema.pre(/^find/, function (next) {
+  /*   this.populate([
+    {
+      path: "user",
+      select: "-__v",
+    },
+  ]); */
+
+  next();
+});
+//SAVE MIDLEWEERE --------------------------------------------------------
 professeurSchema.pre("save", async function (next) {
   const user = await User.findById(this.user);
   this.nom = user.nom;
   this.prenom = user.prenom;
-  this.email = user.email;
-  this.info.mobile = user.mobile;
-  this.info.banque = user.banque;
-  this.info.accountNumero = user.accountNumero;
-  const unqRef = [...new Set(this.matieres.map(String))];
-  if (this.matieres.length !== unqRef.length) {
+  /*  const unqRef = [...new Set(this.elements.map(String))];
+  if (this.elements.length !== unqRef.length) {
     const error = new Error(
       "ID d'objets en double dans les matière référence !"
     );
@@ -64,8 +78,8 @@ professeurSchema.pre("save", async function (next) {
   }
   try {
     const existe_matiere = await Promise.all(
-      this.matieres.map(async (el) => {
-        const refDoc = await Matiere.findById(el);
+      this.elements.map(async (el) => {
+        const refDoc = await Element.findById(el);
         if (!refDoc) {
           throw new Error(
             `Aucun document reference trouvé pour cet identifiant: ${el} !`
@@ -74,25 +88,44 @@ professeurSchema.pre("save", async function (next) {
         return refDoc;
       })
     );
-    next();
   } catch (error) {
-    next(error);
-  }
+    console.log(error.message);
+  } */
+
+  next();
 });
-professeurSchema.post("findOneAndDelete", async function (professeur, user) {
+// POST SAVE MIDLEWEERE ==============================================================================
+professeurSchema.post("save", async function (professeur, next) {
+  const Cours = require("./cours");
+  await Cours.updateMany(
+    {
+      professeur: professeur._id,
+    },
+    { enseignant: professeur.nom + " " + professeur.prenom }
+  );
+  next();
+});
+//FIND ONE AND DELETE MIDLEWEERE --------------------------------------------------------
+professeurSchema.post("findOneAndDelete", async function (professeur) {
   console.log(" professeur remove midleweere work ....................");
   const Cours = require("./cours");
   const Emploi = require("./emploi");
-
-  let message = `L'eneignant(e) : ${user.nom}  ${user.prenom} est suupprimé  et ces [ cours, emploi] avec succés .`;
+  const Element = require("./element");
+  const Paiement = require("./paiement");
+  let message = `L'eneignant(e) : ${professeur.nom}  ${professeur.prenom} est suupprimé  et ces [ cours, emploi] avec succés .`;
   await Cours.deleteMany({ professeur: professeur._id });
   await Emploi.deleteMany({ professeur: professeur._id });
-  professeur._id = message;
+  await Paiement.deleteMany({ professeur: professeur._id });
+  await Element.updateMany({
+    $pull: {
+      professeurCM: professeur._id,
+      professeurTD: professeur._id,
+      professeurTP: professeur._id,
+    },
+  });
+  professeur.nom = message;
 });
-professeurSchema.methods.getUserInformation = async function () {
-  const user = await User.findById(this.user);
-  return user;
-};
+// SET NBC NBH SOMME METHOD -------------------------------------------------------------------------------------------
 professeurSchema.methods.setNBC_NBH_SOMME = async function (cours, option) {
   const professeur = await this.constructor.findById(this._id);
   let cours_info = await cours.getTHSomme();
@@ -116,7 +149,7 @@ professeurSchema.methods.setNBC_NBH_SOMME = async function (cours, option) {
 
   await professeur.save();
 };
-/* -------------------------------------------------------------------GET NBH TH NBC SOMME ----------------------------------------- */
+//GET NBH TH NBC SOMME BETWEEN TO TIMPS-------------------------------------------------------------------
 professeurSchema.methods.getDebitDate_FinDate = async function (debit, fin) {
   const Cours = require("./cours");
   let debitDate = new Date(debit);
@@ -143,7 +176,7 @@ professeurSchema.methods.getDebitDate_FinDate = async function (debit, fin) {
 
   return data;
 };
-/* ------------------------------------------------------------------------------GET DETAIL NBC NBH TH SOMME------------------------------- */
+// GET DETAIL NBC NBH TH SOMME BETWEEN DEBIT AND FIN ---------------------------------------------------------------
 professeurSchema.methods.DetailNBH_TH_Nbc_Somme = async function (debit, fin) {
   const Cours = require("./cours");
   const professeur = await this.constructor.findById(this._id);
@@ -177,9 +210,8 @@ professeurSchema.methods.DetailNBH_TH_Nbc_Somme = async function (debit, fin) {
               _id: {
                 element: "$element",
                 matiere: "$matiere",
-                prix: "$prix",
               },
-              /*         date: { $addToSet: "$date" }, */
+              /*     date: { $addToSet: "$date" }, */
               nbh: { $sum: "$nbh" },
               th: { $sum: "$th" },
               somme: { $sum: "$somme" },
@@ -211,27 +243,7 @@ professeurSchema.methods.DetailNBH_TH_Nbc_Somme = async function (debit, fin) {
 
   return data;
 };
-/* -----------------------------------------------------------get professeur matieres method------------------------------- */
-professeurSchema.methods.getMatieres = async function () {
-  const Matiere = require("./matiere");
-  const professeur = await this.constructor.findById(this._id);
-  let matieres = [];
-  for (elem of professeur.matieres) {
-    try {
-      let matiere = await Matiere.findById(elem);
-      let matiere_info = await matiere.getCodePrixCNameCCode();
-      let dt = {
-        _id: matiere._id,
-        name: matiere.name,
-        prix: matiere_info[1],
-        categorie: matiere_info[2],
-        code: matiere_info[0],
-      };
-      matieres.push(dt);
-    } catch (error) {}
-  }
-  return matieres;
-};
+
 /* ----------------------------------------------------------get professeur elements method------------------------------------ */
 professeurSchema.methods.getElements = async function (type) {
   const Element = require("./element");
@@ -245,9 +257,9 @@ professeurSchema.methods.getElements = async function (type) {
   } else {
     elements = await Element.find({
       $or: [
-        { professeurCM: { $in: [professeur._id] } },
-        { professeurTP: { $in: [professeur._id] } },
-        { professeurTD: { $in: [professeur._id] } },
+        { professeurCM: { $in: [this._id] } },
+        { professeurTP: { $in: [this._id] } },
+        { professeurTD: { $in: [this._id] } },
       ],
     });
   }

@@ -46,29 +46,15 @@ const createSendToken = async (user, statusCode, res, message) => {
 };
 /* =================================================================SIGNUP ================================================== */
 exports.singup = catchAsync(async (req, res, next) => {
-  let message = "";
-  let newUser;
-  const email = req.body.email;
-  const password = req.body.password;
-  // 1) check if email and password exist
-  if (!email || !password) {
-    return next(
-      new AppError(
-        "Veuillez fournir votre adresse e-mail et votre mot de passe!",
-        400
-      )
-    );
-  }
-
-  // 2) check if user exists && password is correct
-  const user = await User.findOne({ email })
-    .select("+password")
-    .select("+active");
-  if (!user || !(await user.correctPassword(password, user.password))) {
-    return next(new AppError("E-mail ou mot de passe incorrect !", 401));
-  }
-
-  if (user.role === "professeur") {
+  const newUser = await User.create({
+    nom: req.body.nom,
+    prenom: req.body.prenom,
+    password: req.body.password,
+    passwordConfirm: req.body.passwordConfirm,
+    email: req.body.email,
+    mobile: req.body.mobile,
+  });
+  /*  if (user.role === "professeur") {
     const prof = await Professeur.findOne({
       accountNumero: req.body.accountNumero,
     });
@@ -90,10 +76,10 @@ exports.singup = catchAsync(async (req, res, next) => {
       accountNumero: req.body.accountNumero,
       banque: req.body.banque,
     });
-  }
+  } */
 
   message = "Votre comple est crée avec succéss .";
-  createSendToken(user, 201, res, message);
+  createSendToken(newUser, 201, res, message);
 });
 /* ====================================================================LOGIN ============================== */
 exports.login = catchAsync(async (req, res, next) => {

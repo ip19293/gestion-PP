@@ -50,8 +50,12 @@ router.route("/upload").post(
   professeurController.uploadProfesseurs
 );
 router
-  .route("/:email/email")
-  .get(authController.protect, professeurController.getProfesseurEmail);
+  .route("/with-email/:email")
+  .get(
+    authController.protect,
+    professeurController.getProfesseurEmail,
+    professeurController.getProfesseurs
+  );
 
 router
   .route("/:id")
@@ -65,56 +69,22 @@ router
     authController.restricTo("admin"),
     professeurController.deleteProfesseur
   )
-  .post(
-    authController.protect,
-    authController.restricTo("admin", "professeur"),
-    professeurController.addMatiereToProfesseus
-  )
   .patch(
     authController.protect,
     authController.restricTo("admin", "professeur"),
     professeurController.updateProfesseur
   );
-
 router
-  .route("/:id/cours-non")
-  .get(
-    authController.protect,
-    authController.restricTo("admin", "professeur"),
-    professeurController.getProfCoursNon
-  );
-router
-  .route("/:id/cours-oui")
-  .get(
-    authController.protect,
-    authController.restricTo("admin", "professeur"),
-    professeurController.getProfCoursSigned
-  );
-router
-  .route("/:id/cours")
-  .get(
-    authController.protect,
-    authController.restricTo("admin", "professeur"),
-    professeurController.getProfCours
-  )
+  .route("/:id/:idM")
   .post(
     authController.protect,
     authController.restricTo("admin", "professeur"),
-    professeurController.addCoursToProf
-  );
-router
-  .route("/:id/matiere")
-  .get(
-    authController.protect,
-    authController.restricTo("admin", "professeur"),
-    professeurController.addMatiereToProfesseus
-  );
-router
-  .route("/:id/:idM")
+    professeurController.addElementToProfesseur
+  )
   .delete(
     authController.protect,
     authController.restricTo("admin", "professeur"),
-    professeurController.deleteOneMatProf
+    professeurController.removeElementFromProfesseur
   );
 
 module.exports = router;

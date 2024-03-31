@@ -22,7 +22,6 @@ const coursSchema = mongoose.Schema(
     somme: {
       type: Number,
     },
-
     date: {
       type: Date,
       required: [true, "Date est requis !"],
@@ -41,19 +40,15 @@ const coursSchema = mongoose.Schema(
       ref: "Professeur",
       required: [true, "professeur est requis"],
     },
-    /*    matiere: {
-      type: mongoose.Schema.ObjectId,
-      ref: "Matiere",
-    }, */
+
     element: {
       type: mongoose.Schema.ObjectId,
       ref: "Element",
       required: [true, "element est requis"],
     },
-    matiere: String,
-    signedBy: String,
-    enseignant: String,
-    prix: Number,
+    signedBy: { type: String },
+    matiere: { type: String },
+    enseignant: { type: String },
     isSigned: {
       type: String,
       default: "en attente",
@@ -71,11 +66,10 @@ const coursSchema = mongoose.Schema(
     toObject: { virtuals: true },
   }
 );
-/* =====================================================================MIDLWERE */
+// VALIDATE MIDLWERE =========================================================================
 coursSchema.pre("validate", async function (next) {
   const Element = require("./element");
   try {
-    /* ----------------------------------------------verification de element professeur by type before create-------------------------- */
     const element = await Element.findById(this.element);
     const professeur = await Professeur.findById(this.professeur);
     let professeurs = element["professeur" + this.type];
@@ -112,12 +106,33 @@ coursSchema.pre("validate", async function (next) {
   }
   next();
 });
+//POPULATE FIND QUERY ---------------------------------------------------
+coursSchema.pre(/^find/, function (next) {
+  this.populate([
+    /*   {
+      path: "element",
+      select: "name",
+    }, */
+    {
+      path: "professeur",
+      select: "user",
+      populate: {
+        path: "user",
+        select: "-__v -nom",
+      },
+    },
+  ]);
+
+  next();
+});
+// PRE SAVE MIDLEWEERE ==============================================================================
 coursSchema.pre("save", async function (next) {
   const Element = require("./element");
+  const Professeur = require("./professeur");
   const element = await Element.findById(this.element);
   const professeur = await Professeur.findById(this.professeur);
-  this.enseignant = professeur.nom + " " + professeur.prenom;
   this.matiere = element.name;
+  this.enseignant = professeur.nom + " " + professeur.prenom;
   const input = this.startTime.split(":");
   let hour = parseInt(input[0]);
   let minute = parseInt(input[1]);
@@ -142,7 +157,6 @@ coursSchema.pre("save", async function (next) {
   }
   let prix = await element.getPrix();
   let sommeUM = tauxHoreure * prix;
-  this.prix = prix;
   this.th = tauxHoreure;
   this.somme = sommeUM;
   /*  if (!this.isNew) {
@@ -153,7 +167,7 @@ coursSchema.pre("save", async function (next) {
  */
   next();
 });
-/* ---------------------------------------------------------------------------------------------- */
+// POST SAVE MIDLEWEERE ==============================================================================
 coursSchema.post("save", async function (cours, next) {
   const professeur = await Professeur.findById(cours.professeur);
   const professeur_cours = await this.constructor.find({
@@ -179,7 +193,7 @@ coursSchema.post("save", async function (cours, next) {
 
   next();
 });
-/*-------------------------------------------------DELETE findOneAndDelete ------------------------------------------ */
+// POST FIND ONE AND DELETE MIDLEWEERE ==========================================================================
 
 coursSchema.post("findOneAndDelete", async function (cours) {
   console.log(" cours remove midleweere work ....................");
@@ -188,7 +202,7 @@ coursSchema.post("findOneAndDelete", async function (cours) {
     await professeur.setNBC_NBH_SOMME(cours, "remove");
   }
 });
-
+// POST FIND ONE AND UPDATE MIDLEWEERE ==========================================================================
 coursSchema.post("findOneAndUpdate", async function (cours, next) {
   let professeur = await Professeur.findById(cours.professeur);
   if (cours.isSigned === "annulé" && cours.signedBy != "admin") {
@@ -204,7 +218,7 @@ coursSchema.post("findOneAndUpdate", async function (cours, next) {
 
   next();
 });
-/* =====================================================================METHODS============================== */
+//GET TAUX HOURAIRE AND SOMME METHOD ----------------------------------------------------------------
 coursSchema.methods.getTHSomme = async function () {
   const Element = require("./element");
   try {
@@ -223,14 +237,5 @@ coursSchema.methods.getTHSomme = async function () {
     console.log(error);
   }
 };
-coursSchema.methods.getProfesseurMatiere = async function () {
-  /*   const Element = require("./element");
-  const element = await Element.findById(this.element);
-  let type = element["professeur" + this.type]; */
-  let professeur = await Professeur.findById(this.professeur);
-  let prof_info = await professeur.getUserInformation();
-  let res = [prof_info.nom, prof_info.prenom, matiere._id, matiere.name];
 
-  return res;
-};
 module.exports = mongoose.model("Cours", coursSchema);
