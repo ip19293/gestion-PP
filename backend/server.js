@@ -32,7 +32,7 @@ connectionDB();
 const app = express();
 app.use(
   cors({
-    origin: "http://localhost:4200",
+    origin: ["http://localhost:4200", "http://localhost:61249"],
   })
 );
 app.use(express.json({ limit: "10kb" }));

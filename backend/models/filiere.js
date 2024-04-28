@@ -8,27 +8,12 @@ const filiereSchema = mongoose.Schema({
   },
   description: {
     type: String,
+    unique: true,
   },
   isPaireSemestre: {
     type: Boolean,
     default: false,
   },
-  /* 
-  debutSemestrePaire: {
-    type: Date,
-    select: true,
-    default: Date.now(),
-  },
-  debutSemestreInPaire: {
-    type: Date,
-    select: true,
-    default: function () {
-      const start = this.start.getMonth();
-      const f = new Date(this.start);
-      f.setMonth(start + 4);
-      return f;
-    },
-  }, */
 });
 //SAVE MIDLWERED ----------------------------------------------------------------------------------
 filiereSchema.pre("save", async function (next) {

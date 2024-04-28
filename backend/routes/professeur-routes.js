@@ -50,12 +50,22 @@ router.route("/upload").post(
   professeurController.uploadProfesseurs
 );
 router
-  .route("/with-email/:email")
+  .route("/resultats")
   .get(
     authController.protect,
-    professeurController.getProfesseurEmail,
-    professeurController.getProfesseurs
+    authController.restricTo("admin"),
+    professeurController.totalResultats
   );
+router
+  .route("/resultats-detail/:id")
+  .post(
+    authController.protect,
+    authController.restricTo("admin"),
+    professeurController.paiementDetailResultats
+  );
+router
+  .route("/:id/elements")
+  .get(authController.protect, professeurController.getElements);
 
 router
   .route("/:id")

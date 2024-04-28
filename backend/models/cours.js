@@ -47,8 +47,6 @@ const coursSchema = mongoose.Schema(
       required: [true, "element est requis"],
     },
     signedBy: { type: String },
-    matiere: { type: String },
-    enseignant: { type: String },
     isSigned: {
       type: String,
       default: "en attente",
@@ -67,7 +65,7 @@ const coursSchema = mongoose.Schema(
   }
 );
 // VALIDATE MIDLWERE =========================================================================
-coursSchema.pre("validate", async function (next) {
+/* coursSchema.pre("validate", async function (next) {
   const Element = require("./element");
   try {
     const element = await Element.findById(this.element);
@@ -102,17 +100,17 @@ coursSchema.pre("validate", async function (next) {
       );
     }
   } catch (error) {
-    //next(error);
+    next(error);
   }
-  next();
-});
+  // next();
+}); */
 //POPULATE FIND QUERY ---------------------------------------------------
 coursSchema.pre(/^find/, function (next) {
   this.populate([
-    /*   {
+    {
       path: "element",
-      select: "name",
-    }, */
+      select: "name code",
+    },
     {
       path: "professeur",
       select: "user",
@@ -128,11 +126,7 @@ coursSchema.pre(/^find/, function (next) {
 // PRE SAVE MIDLEWEERE ==============================================================================
 coursSchema.pre("save", async function (next) {
   const Element = require("./element");
-  const Professeur = require("./professeur");
   const element = await Element.findById(this.element);
-  const professeur = await Professeur.findById(this.professeur);
-  this.matiere = element.name;
-  this.enseignant = professeur.nom + " " + professeur.prenom;
   const input = this.startTime.split(":");
   let hour = parseInt(input[0]);
   let minute = parseInt(input[1]);
@@ -159,12 +153,7 @@ coursSchema.pre("save", async function (next) {
   let sommeUM = tauxHoreure * prix;
   this.th = tauxHoreure;
   this.somme = sommeUM;
-  /*  if (!this.isNew) {
-    console.log("yes--------------------------------------");
-  } else {
-    console.log("no---------------------------------");
-  }
- */
+
   next();
 });
 // POST SAVE MIDLEWEERE ==============================================================================
@@ -193,15 +182,7 @@ coursSchema.post("save", async function (cours, next) {
 
   next();
 });
-// POST FIND ONE AND DELETE MIDLEWEERE ==========================================================================
 
-coursSchema.post("findOneAndDelete", async function (cours) {
-  console.log(" cours remove midleweere work ....................");
-  if (cours && cours.isSigned === "effectué") {
-    let professeur = await Professeur.findById(cours.professeur);
-    await professeur.setNBC_NBH_SOMME(cours, "remove");
-  }
-});
 // POST FIND ONE AND UPDATE MIDLEWEERE ==========================================================================
 coursSchema.post("findOneAndUpdate", async function (cours, next) {
   let professeur = await Professeur.findById(cours.professeur);

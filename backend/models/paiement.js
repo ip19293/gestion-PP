@@ -2,6 +2,7 @@ const mongoose = require("mongoose");
 const Professeur = require("../models/professeur");
 const Cours = require("../models/cours");
 const sendEmail = require("../utils/email");
+const e = require("cors");
 const paiementSchema = mongoose.Schema(
   {
     date: {
@@ -19,31 +20,15 @@ const paiementSchema = mongoose.Schema(
       select: true,
       required: true,
     },
+    somme: {
+      type: Number,
+      select: true,
+      required: true,
+    },
     professeur: {
       type: mongoose.Schema.ObjectId,
       ref: "Professeur",
       required: [true, "professeur est requis !"],
-      unique: true,
-    },
-    nbh: {
-      type: Number,
-      select: true,
-      required: [true, "Le nombre d'heures est requis !"],
-    },
-    th: {
-      type: Number,
-      select: true,
-      required: [true, "Le taux houreux est requis !"],
-    },
-    nbc: {
-      type: Number,
-      select: true,
-      required: [true, "Le nombre de cours est requis !"],
-    },
-    totalMontant: {
-      type: Number,
-      select: true,
-      required: [true, "Le total montant est requis !"],
     },
     status: {
       type: String,
@@ -56,7 +41,6 @@ const paiementSchema = mongoose.Schema(
       default: "vide",
       enum: ["vide", "accepté", "refusé"],
     },
-    enseignant: String,
   },
   { timestamps: true },
   {
@@ -82,34 +66,34 @@ paiementSchema.pre("validate", async function (next) {
     next(error);
   }
 });
+//change list cours between fromDate and toDate to paied prepare ----------------------------------------
 paiementSchema.pre("save", async function (next) {
-  const professeur = await Professeur.findById(this.professeur);
-  this.enseignant = professeur.nom + " " + professeur.prenom;
-  const filter = {
-    date: { $gte: this.fromDate, $lte: this.toDate },
-    professeur: this.professeur,
-    isSigned: "effectué",
-    isPaid: "en attente",
-  };
-  await Cours.updateMany(filter, {
-    $set: { isPaid: "préparé" },
-  });
+  console.log(" paiement save midleweere work ....................");
+  let filter = queryFilter(
+    this.professeur,
+    this.fromDate,
+    this.toDate,
+    "effectué",
+    "en attente"
+  );
+  await Cours.updateMany(filter, { $set: { isPaid: "préparé" } });
 
   next();
 });
-/* paiementSchema.post("findOneAndUpdate", async function (paiement, next) {
-  const filter = {
-    date: { $gte: paiement.fromDate, $lte: paiement.toDate },
-    professeur: paiement.professeur,
-    isSigned: "effectué",
-    isPaid: "en attente",
-  };
+//find one and delete mildweere to update liste of cours corespondate ----------------------------------------
+paiementSchema.post("findOneAndDelete", async function (paiement) {
+  console.log(" paiement remove midleweere work ....................");
+  let filter = queryFilter(
+    paiement.professeur,
+    paiement.fromDate,
+    paiement.toDate,
+    "effectué",
+    "préparé"
+  );
   await Cours.updateMany(filter, {
-    $set: { isPaid: "préparé" },
+    $set: { isPaid: "en attente" },
   });
-
-  next();
-}); */
+});
 paiementSchema.post("save", async function (paiement, next) {
   const professeur = await Professeur.findById(paiement.professeur);
   const message = `Nouvelle facture de  paiement non  validée ? Connectez-vous a votre compte et  validez la facture .\n`;
@@ -126,6 +110,11 @@ paiementSchema.post("save", async function (paiement, next) {
   }
   next();
 });
+// find populate midlweere -------------------------------------------------------
+paiementSchema.pre(/^find/, function (next) {
+  this.populate({ path: "professeur" });
+  next();
+});
 /* ===========================================================================================METHODS ========================= */
 
 paiementSchema.methods.setConfirmation = function (value) {
@@ -133,5 +122,26 @@ paiementSchema.methods.setConfirmation = function (value) {
 };
 paiementSchema.methods.setStatus = function (value) {
   this.status = value;
+};
+
+// functions ----------------------------------------------------------------
+const queryFilter = function (professeur, debit, fin, signed, paid) {
+  let debitDate = new Date(debit);
+  let finDate = new Date(fin);
+  const queryMatch =
+    debit !== undefined && fin !== undefined
+      ? {
+          date: { $gte: debitDate, $lte: finDate },
+          professeur: new mongoose.Types.ObjectId(professeur),
+          isSigned: signed,
+          isPaid: paid,
+        }
+      : {
+          professeur: new mongoose.Types.ObjectId(professeur),
+          isSigned: signed,
+          isPaid: paid,
+        };
+
+  return queryMatch;
 };
 module.exports = mongoose.model("Paiement", paiementSchema);

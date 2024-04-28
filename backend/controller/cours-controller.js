@@ -7,15 +7,26 @@ const AppError = require("../utils/appError");
 const VERIFICATION = require("./functions/verificatin");
 exports.getCours = catchAsync(async (req, res, next) => {
   let filter = {};
-  // if (req.params.id) filter = { cours: req.params.id };
+  if (req.params.id) filter = { cours: req.params.id };
   //EXECUTE QUERY
   const features = new APIFeatures(Cours.find(filter), req.query)
     .filter()
     .sort()
     .limitFields()
     .pagination();
-  const cours = await features.query;
-
+  const coursData = await features.query;
+  const cours = coursData.map((cours) => ({
+    ...cours.toObject(),
+    professeur: cours.professeur ? cours.professeur._id : null,
+    nom: cours.professeur.user ? cours.professeur.user.nom : null,
+    prenom: cours.professeur.user ? cours.professeur.user.prenom : null,
+    //-----------------------------------------------------------------
+    element: cours.element ? cours.element._id : null,
+    matiere: cours.element ? cours.element.name : null,
+    filiere: cours.element ? cours.element.code.split("-")[0] : null,
+    code: cours.element ? cours.element.code.split("-")[1] : null,
+    //professeur: undefined,
+  }));
   res.status(200).json({
     status: "succès",
     cours,
@@ -113,51 +124,26 @@ exports.addCours = catchAsync(async (req, res, next) => {
 /* ======================================================================EDIT COURS ============================================================== */
 exports.updateCours = async (req, res, next) => {
   const id = req.params.id;
-  /*   const professeur = await Professeur.findById(req.body.professeur);
-  const matiere = await Matiere.findById(req.body.matiere); */
-  /*   if (!professeur) {
+  const professeur = await Professeur.findById(req.body.professeur);
+  if (!professeur) {
     return next(
       new AppError("Aucune enseignant trouvée avec cet identifiant !", 404)
     );
   }
-  if (!matiere) {
-    return next(
-      new AppError("Aucune matiére trouvée avec cet identifiant !", 404)
-    );
-  } */
+
   const element = await Element.findById(req.body.element);
   if (!element) {
     return next(
       new AppError("Aucune element trouvée avec cet identifiant !", 404)
     );
   }
-  let type = element["professeur" + req.body.type];
-
-  const professeur_elm = await Professeur.findById(type);
-  let query = professeur_elm
-    ? { _id: { $ne: id }, element: req.body.element, date: req.body.date }
-    : {
-        _id: { $ne: id },
-        professeur: req.body.professeur,
-        date: req.body.date,
-      };
-  if (!professeur_elm) {
-    /*   const professeur = await Professeur.findById(req.body.professeur);
-    if (!professeur) {
-      return next(
-        new AppError("Aucune enseignant trouvée avec cet identifiant !", 404)
-      );
-    } */
-    return next(
-      new AppError(
-        `Il n'y a pas de professeur  ${req.body.type} de cette élément  !`,
-        404
-      )
-    );
-  }
+  let query = {
+    _id: { $ne: id },
+    professeur: req.body.professeur,
+    date: req.body.date,
+  };
   const cours_list = await Cours.find(query);
   const result = VERIFICATION(req.body, cours_list, "enseignant");
-
   if (result[0] == "failed") {
     console.log(result[0]);
     return next(new AppError(`${result[1]}`, 404));
@@ -167,8 +153,7 @@ exports.updateCours = async (req, res, next) => {
   cours.nbh = req.body.nbh;
   cours.date = req.body.date;
   cours.startTime = req.body.startTime;
-  // cours.professeur = professeur_elm ? undefined : req.body.professeur;
-  /*   cours.matiere = req.body.matiere; */
+  cours.professeur = req.body.professeur;
   cours.element = req.body.element;
 
   await cours.save();
@@ -204,12 +189,7 @@ exports.signeCours = async (req, res, next) => {
       )
     );
   }
-  const professeur = await Professeur.findById(cours_sign.professeur);
-  if (!professeur) {
-    return next(
-      new AppError("Aucune professeur trouvée avec cet identifiant !", 404)
-    );
-  }
+
   let query = {};
   if (cours_sign.isSigned === "annulé") {
     query =
@@ -228,7 +208,6 @@ exports.signeCours = async (req, res, next) => {
       isSigned: "effectué",
       signedBy: req.user.role,
     };
-    await professeur.setNBC_NBH_SOMME(cours_sign);
   } else {
     query =
       req.user.role === "admin"
@@ -236,7 +215,6 @@ exports.signeCours = async (req, res, next) => {
             isSigned: "annulé",
           }
         : {};
-    await professeur.setNBC_NBH_SOMME(cours_sign, "remove");
     message =
       req.user.role === "admin"
         ? "La signature a été annulé  avec succés."
@@ -376,13 +354,13 @@ exports.getCoursByProfesseursId = catchAsync(async (req, res, next) => {
       new AppError("Aucune enseignant trouvée avec cet identifiant !", 404)
     );
   }
-  const data = await professeur.DetailNBH_TH_Nbc_Somme(
+  const data = await professeur.paiementDetailResultats(
     req.body.debit,
     req.body.fin
   );
-  let cours = data.cours[0].matiere;
-  let total = data.cours[0].total;
-  let dt = {
+  let cours = data[0].matieres;
+  let total = data[0].total;
+  /*   let dt = {
     _id: {
       matiere: "total",
     },
@@ -392,14 +370,14 @@ exports.getCoursByProfesseursId = catchAsync(async (req, res, next) => {
     nbc: total.length !== 0 ? total[0].NBC : 0,
   };
   cours.push(dt);
-  let date = data.date;
+  let date = data.date; */
   res.status(200).json({
     status: "succès",
-    // data,
-    dt,
+    data,
+    /*  dt,
     professeur,
     date,
     cours,
-    total,
+    total, */
   });
 });

@@ -4,7 +4,6 @@ const Cours = require("../models/cours");
 const Professeur = require("../models/professeur");
 const catchAsync = require("../utils/catchAsync");
 const AppError = require("../utils/appError");
-const professeur = require("../models/professeur");
 const filterOb = (obj, ...allowedFields) => {
   const newObj = {};
   Object.keys(obj).forEach((el) => {
@@ -16,31 +15,18 @@ const filterOb = (obj, ...allowedFields) => {
 /*  1)============================= get All paiement ======================================================*/
 exports.getPaiements = catchAsync(async (req, res, next) => {
   const features = new APIFeatures(Paiement.find(), req.query);
-  const paiements = await features.query.populate({ path: "professeur" });
-
-  /* for (elem of paiements_list) {
-    let professeur = await Professeur.findById(elem.professeur);
-    let prof_info = await professeur.getInfo_Nbh_TH_Nbc_Somme();
-    let data = {
-      _id: elem._id,
-      date: elem.date,
-      fromDate: elem.fromDate,
-      toDate: elem.toDate,
-      nbh: elem.nbh,
-      nbc: elem.nbc,
-      th: elem.th,
-      totalMontant: elem.totalMontant,
-      status: elem.status,
-      confirmation: elem.confirmation,
-      professeur: prof_info[0],
-      nomComplet: prof_info[1] + " " + prof_info[2],
-      email: prof_info[2],
-      mobile: prof_info[3],
-      banque: prof_info[4],
-      accountNumero: prof_info[5],
-    };
-    paiements.push(data);
-  } */
+  const paiementsData = await features.query;
+  const paiements = paiementsData.map((paiement) => ({
+    ...paiement.toObject(),
+    professeur: paiement.professeur ? paiement.professeur._id : null,
+    nomComplet: paiement.professeur.user
+      ? paiement.professeur.user.nom + " " + paiement.professeur.user.nom
+      : null,
+    banque: paiement.professeur ? paiement.professeur.banque : null,
+    accountNumero: paiement.professeur
+      ? paiement.professeur.accountNumero
+      : null,
+  }));
   res.status(200).json({
     status: "success",
     paiements,
@@ -49,43 +35,53 @@ exports.getPaiements = catchAsync(async (req, res, next) => {
 
 // 3) Create new paiement
 exports.addPaiement = catchAsync(async (req, res, next) => {
-  const data = req.body;
-  const paiement_prof = await Paiement.findOne({
-    professeur: req.body.professeur,
-    fromDate: req.body.fromDate,
-    toDate: req.body.toDate,
-  });
+  const professeur = await Professeur.findById(req.body.professeur);
+  if (!professeur) {
+    return next(
+      new AppError("Aucune enseignant trouvée avec cet identifiant !", 404)
+    );
+  }
+  const old_paiement = await Paiement.findOne({ professeur: professeur._id });
+  const resultat = await professeur.paiementTotalResultats(
+    req.body.fromDate,
+    req.body.toDate
+  );
 
-  if (paiement_prof) {
+  if (resultat.length == 0) {
     return next(
       new AppError(
-        "Intersection de la période de début ou de fin avec une autre",
+        "Le paiement n'est pas  ajouter ,il peut etre vide ou existe déja !",
         404
       )
     );
   }
-  const paiement = await Paiement.create(data);
-  /*  const filter = {
-    date: { $gte: req.body.fromDate, $lte: req.body.toDate },
-    professeur: data.professeur,
-    isSigned: "effectué",
-    isPaid: "en attente",
+  if (old_paiement && old_paiement.status != "terminé") {
+    return next(
+      new AppError(
+        "Le paiement n'est pas  ajouter ,car le professeur a des paiements non terminer !",
+        404
+      )
+    );
+  }
+  let paiement_data = {
+    fromDate: resultat[0].fromDate,
+    toDate: resultat[0].toDate,
+    professeur: resultat[0].professeur,
+    somme: resultat[0].somme,
   };
-  let up_cours = await Cours.updateMany(filter, {
-    $set: { isPaid: "préparé" },
-  }); */
 
+  const new_paiement = await Paiement.create(paiement_data);
   res.status(200).json({
     status: "success",
-    message: `La facture de paiement est crée et envoié a la professeur corespondant ...`,
-    paiement,
+    message: `Le paiement est crer avec succéss .`,
+    new_paiement,
   });
 });
 // 4) Get payement informatiom ---------------------------------------------------------------------------------------
 exports.getInformation = catchAsync(async (req, res, next) => {
   const professeurs = await Professeur.find({ nbc: { $gte: 1 } });
   let query =
-    req.body.debit !== undefined && req.body.fin !== undefined
+    req.body.fromDate !== undefined && req.body.fin !== undefined
       ? {
           date: { $gte: req.body.debit, $lte: req.body.fin },
           isSigned: "effectué",
@@ -139,30 +135,34 @@ exports.getInformation = catchAsync(async (req, res, next) => {
 // 4) Create many paiements ---------------------------------------------------------------------------------------
 exports.addManyPaiements = catchAsync(async (req, res, next) => {
   const data = req.body.ids;
-  let message = "";
-  const professeurs =
-    data == undefined
-      ? await Professeur.find({ nbc: { $gte: 1 } })
-      : await Professeur.find({
-          nbc: { $gte: 1 },
-          _id: { $in: data },
-        });
-  for (elem of professeurs) {
-    let dt = await elem.getPaiementData(req.body.debit, req.body.fin);
-    if (!dt) message = `Certaines factures existe ou pas de solde `;
-    try {
-      let paiement = await Paiement.create(dt);
-      if (paiement) {
-        message =
-          message === ""
-            ? `Les factures de paiement sont crée et envoié vers les professeurs corespondant`
-            : " Certaines factures de paiement sont crée et envoié vers les professeurs corespondant";
+  let new_add = false;
+  //filter cours liste by professeurs ids between debit and fin
+  for (id of data) {
+    let professeur = await Professeur.findById(id);
+    if (professeur) {
+      let resultat = await professeur.paiementTotalResultats(
+        req.body.fromDate,
+        req.body.fin
+      );
+      if (resultat.length != 0) {
+        let old_paiement = await Paiement.findOne({ professeur: id });
+        if (!old_paiement || old_paiement.status == "terminé") {
+          let paiement = await Paiement.create({
+            fromDate: resultat[0].fromDate,
+            toDate: resultat[0].toDate,
+            somme: resultat[0].somme,
+            professeur: resultat[0].professeur,
+          });
+          if (paiement) {
+            new_add = true;
+          }
+        }
       }
-      /*    if (!paiement) {
-        message = `, Sauf pour certaines factures qui ne sont valide`;
-      } */
-    } catch (error) {}
+    }
   }
+  let message = new_add
+    ? "Des nouvelles factures de paiement sont crée et envoié vers les professeurs corespondant ."
+    : "Pas des nouvelles factures de paiement sont crer !";
 
   res.status(200).json({
     status: "success",
@@ -205,30 +205,16 @@ exports.updatePaiement = catchAsync(async (req, res, next) => {
 
 exports.deletePaiement = catchAsync(async (req, res, next) => {
   const id = req.params.id;
-  /*   const paiement = await Paiement.findById(id);
-
+  const paiement = await Paiement.findById(id);
   if (!paiement) {
     return next(
-      new AppError("Aucun object trouvé avec cet identifiant !", 404)
+      new AppError("Aucun paiement n'est trouver avec cet identifiant !", 404)
     );
-  } */
-  const filter = {
-    date: { $gte: paiement.fromDate, $lte: paiement.toDate },
-    professeur: paiement.professeur,
-    isSigned: "effectué",
-    isPaid: "préparé",
-  };
-
-  const deleted_paiement = await Paiement.findOneAndDelete({ _id: id });
-  if (deleted_paiement) {
-    await Cours.updateMany(filter, {
-      $set: { isPaid: "en attente" },
-    });
   }
+  const deleted_paiement = await Paiement.findOneAndDelete({ _id: id });
   res.status(200).json({
     status: "success",
     message: `Le paiement est suprimé avec succéss`,
-    paiement,
   });
 });
 // 6) get paiement By ID

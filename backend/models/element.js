@@ -14,7 +14,7 @@ const elementSchema = mongoose.Schema(
     code: {
       type: String,
       select: true,
-      /*   unique: true, */
+      unique: true,
     },
     semestre: {
       required: [true, "Numéro de semestre est requis !"],
@@ -116,7 +116,7 @@ elementSchema.pre("save", async function (next) {
   let nb = getNonExistingNumber(numberArray);
   let codeStringPart = categorie.code;
   let code = codeStringPart + this.semestre + filiere_info[1] + nb;
-  this.code = code;
+  this.code = filiere.description + "-" + code;
 
   //verivication de IDS IN professeurCM , professeurTD & professeurTP filelds
   const unqRef = [...new Set(this.professeurCM.map(String))];
@@ -178,17 +178,7 @@ const getNonExistingNumber = function (arr) {
   }
   return arr.length + 1;
 };
-// POST SAVE MIDLEWEERE ==============================================================================
-elementSchema.post("save", async function (element, next) {
-  const Cours = require("./cours");
-  await Cours.updateMany(
-    {
-      element: element._id,
-    },
-    { matiere: element.name }
-  );
-  next();
-});
+
 //POST FIND ONE AND DELETE MIDELWEERE ---------------------------------------------------------------
 elementSchema.post("findOneAndDelete", async function (element) {
   console.log(" element remove midleweere work ....................");

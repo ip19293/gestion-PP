@@ -28,24 +28,6 @@ const professeurSchema = mongoose.Schema(
         "Le numéro de compte doit avoir une longueur  plus ou egale a 10 chiffres ",
       ],
     },
-    nbh: {
-      type: Number,
-      default: 0,
-    },
-    /*   th: {
-      type: Number,
-      default: 0,
-    }, */
-    nbc: {
-      type: Number,
-      default: 0,
-    },
-    somme: {
-      type: Number,
-      default: 0,
-    },
-    nom: { type: String, lowercase: true },
-    prenom: { type: String, lowercase: true },
   },
 
   {
@@ -53,58 +35,19 @@ const professeurSchema = mongoose.Schema(
     toObject: { virtuals: true },
   }
 );
+
 //POPULATE FIND QUERY ---------------------------------------------------
 professeurSchema.pre(/^find/, function (next) {
-  /*   this.populate([
+  this.populate([
     {
       path: "user",
       select: "-__v",
     },
-  ]); */
+  ]);
 
   next();
 });
-//SAVE MIDLEWEERE --------------------------------------------------------
-professeurSchema.pre("save", async function (next) {
-  const user = await User.findById(this.user);
-  this.nom = user.nom;
-  this.prenom = user.prenom;
-  /*  const unqRef = [...new Set(this.elements.map(String))];
-  if (this.elements.length !== unqRef.length) {
-    const error = new Error(
-      "ID d'objets en double dans les matière référence !"
-    );
-    return next(error);
-  }
-  try {
-    const existe_matiere = await Promise.all(
-      this.elements.map(async (el) => {
-        const refDoc = await Element.findById(el);
-        if (!refDoc) {
-          throw new Error(
-            `Aucun document reference trouvé pour cet identifiant: ${el} !`
-          );
-        }
-        return refDoc;
-      })
-    );
-  } catch (error) {
-    console.log(error.message);
-  } */
 
-  next();
-});
-// POST SAVE MIDLEWEERE ==============================================================================
-professeurSchema.post("save", async function (professeur, next) {
-  const Cours = require("./cours");
-  await Cours.updateMany(
-    {
-      professeur: professeur._id,
-    },
-    { enseignant: professeur.nom + " " + professeur.prenom }
-  );
-  next();
-});
 //FIND ONE AND DELETE MIDLEWEERE --------------------------------------------------------
 professeurSchema.post("findOneAndDelete", async function (professeur) {
   console.log(" professeur remove midleweere work ....................");
@@ -112,7 +55,6 @@ professeurSchema.post("findOneAndDelete", async function (professeur) {
   const Emploi = require("./emploi");
   const Element = require("./element");
   const Paiement = require("./paiement");
-  let message = `L'eneignant(e) : ${professeur.nom}  ${professeur.prenom} est suupprimé  et ces [ cours, emploi] avec succés .`;
   await Cours.deleteMany({ professeur: professeur._id });
   await Emploi.deleteMany({ professeur: professeur._id });
   await Paiement.deleteMany({ professeur: professeur._id });
@@ -123,125 +65,99 @@ professeurSchema.post("findOneAndDelete", async function (professeur) {
       professeurTP: professeur._id,
     },
   });
-  professeur.nom = message;
 });
-// SET NBC NBH SOMME METHOD -------------------------------------------------------------------------------------------
-professeurSchema.methods.setNBC_NBH_SOMME = async function (cours, option) {
-  const professeur = await this.constructor.findById(this._id);
-  let cours_info = await cours.getTHSomme();
-  if (option === undefined || option === "add") {
-    professeur.nbh =
-      professeur.nbh >= 0 ? professeur.nbh + cours.nbh : professeur.nbh;
-    professeur.nbc = professeur.nbc >= 0 ? professeur.nbc + 1 : professeur.nbc;
-    professeur.somme =
-      professeur.somme >= 0
-        ? professeur.somme + cours_info[1]
-        : professeur.somme;
-  } else {
-    professeur.nbh =
-      professeur.nbh > 0 ? professeur.nbh - cours.nbh : professeur.nbh;
-    professeur.nbc = professeur.nbc > 0 ? professeur.nbc - 1 : professeur.nbc;
-    professeur.somme =
-      professeur.somme > 0
-        ? professeur.somme - cours_info[1]
-        : professeur.somme;
-  }
 
-  await professeur.save();
-};
-//GET NBH TH NBC SOMME BETWEEN TO TIMPS-------------------------------------------------------------------
-professeurSchema.methods.getDebitDate_FinDate = async function (debit, fin) {
+//GET resultat total of professeur between debit and fin date -----------------------
+professeurSchema.methods.paiementTotalResultats = async function (debit, fin) {
   const Cours = require("./cours");
-  let debitDate = new Date(debit);
-  let finDate = new Date(fin);
-  const query =
-    debit !== undefined && fin !== undefined
-      ? {
-          date: { $gte: debitDate, $lte: finDate },
-          professeur: this._id,
-          isSigned: "effectué",
-          isPaid: "en attente",
-        }
-      : { professeur: this._id, isSigned: "effectué", isPaid: "en attente" };
-  const prof_cours = await Cours.find(query).sort({ date: 1 });
-  debitDate = prof_cours.length != 0 ? prof_cours[0].date : new Date();
-  finDate =
-    prof_cours.length != 0
-      ? prof_cours[prof_cours.length - 1].date
-      : new Date();
-  let data = {
-    debit: debitDate,
-    fin: finDate,
-  };
-
-  return data;
-};
-// GET DETAIL NBC NBH TH SOMME BETWEEN DEBIT AND FIN ---------------------------------------------------------------
-professeurSchema.methods.DetailNBH_TH_Nbc_Somme = async function (debit, fin) {
-  const Cours = require("./cours");
-  const professeur = await this.constructor.findById(this._id);
-  let debitDate = new Date(debit);
-  let finDate = new Date(fin);
-  const queryMatch =
-    debit !== undefined && fin !== undefined
-      ? {
-          $match: {
-            date: { $gte: debitDate, $lte: finDate },
-            professeur: new mongoose.Types.ObjectId(this._id),
-            isSigned: "effectué",
-            isPaid: "en attente",
-          },
-        }
-      : {
-          $match: {
-            professeur: new mongoose.Types.ObjectId(this._id),
-            isSigned: "effectué",
-            isPaid: "en attente",
-          },
-        };
-  // data: { $push: "$$ROOT" },
+  const queryMatch = queryFilter(this._id, debit, fin);
   const cours = await Cours.aggregate([
-    queryMatch,
+    { $match: queryMatch },
+    {
+      $lookup: {
+        from: "elements",
+        localField: "element",
+        foreignField: "_id",
+        as: "elementData",
+      },
+    },
+    { $unwind: "$elementData" },
+    {
+      $group: {
+        _id: null,
+        fromDate: { $min: "$date" },
+        toDate: { $max: "$date" },
+        nbc: { $sum: 1 },
+        nbh: { $sum: "$nbh" },
+        th: { $sum: "$th" },
+        somme: { $sum: "$somme" },
+        professeur: { $first: "$professeur" },
+      },
+    },
+  ]);
+
+  return cours;
+};
+//GET resultat total group by element of professeur between debit and fin date -----
+professeurSchema.methods.paiementDetailResultats = async function (debit, fin) {
+  const Cours = require("./cours");
+  const queryMatch = queryFilter(this._id, debit, fin);
+  const cours = await Cours.aggregate([
+    { $match: queryMatch },
+    {
+      $lookup: {
+        from: "elements",
+        localField: "element",
+        foreignField: "_id",
+        as: "elementData",
+      },
+    },
+    { $unwind: "$elementData" },
+    {
+      $lookup: {
+        from: "categories",
+        localField: "elementData.categorie",
+        foreignField: "_id",
+        as: "categorieData",
+      },
+    },
+    { $unwind: "$categorieData" },
     {
       $facet: {
-        matiere: [
+        matieres: [
           {
             $group: {
-              _id: {
-                element: "$element",
-                matiere: "$matiere",
-              },
-              /*     date: { $addToSet: "$date" }, */
+              _id: "$element",
+              fromDate: { $min: "$date" },
+              toDate: { $max: "$date" },
+              nbc: { $sum: 1 },
               nbh: { $sum: "$nbh" },
               th: { $sum: "$th" },
               somme: { $sum: "$somme" },
-              nbc: { $sum: 1 },
+              element: { $first: "$elementData._id" },
+              name: { $first: "$elementData.name" },
+              prix: { $first: "$categorieData.prix" },
             },
           },
         ],
         total: [
           {
             $group: {
-              _id: null, // Group all documents
-              NBH: { $sum: "$nbh" },
-              TH: { $sum: "$th" },
-              NBC: { $sum: 1 },
-              SOMME: { $sum: "$somme" },
+              _id: null,
+              fromDate: { $min: "$date" },
+              toDate: { $max: "$date" },
+              nbc: { $sum: 1 },
+              nbh: { $sum: "$nbh" },
+              th: { $sum: "$th" },
+              somme: { $sum: "$somme" },
             },
           },
         ],
       },
     },
-  ]).sort({ date: 1 });
-  let date_info = professeur
-    ? await professeur.getDebitDate_FinDate(debit, fin)
-    : {};
-  let data = {
-    cours,
-    date: date_info,
-  };
+  ]);
 
-  return data;
+  return cours;
 };
 
 /* ----------------------------------------------------------get professeur elements method------------------------------------ */
@@ -330,23 +246,21 @@ professeurSchema.methods.getEmplois = async function () {
 
   return emplois_temp;
 };
-/* ------------------------------------------------------------CREATE PAIEMENT ---------------------------- */
-professeurSchema.methods.getPaiementData = async function (from, to) {
-  const professeur = await this.constructor.findById(this._id);
-  let prof_detail = await professeur.DetailNBH_TH_Nbc_Somme(from, to);
-  let data = prof_detail.cours[0].total[0];
-  if (data) {
-    let dt = {
-      professeur: professeur._id,
-      fromDate: prof_detail.date.debit,
-      toDate: prof_detail.date.fin,
-      totalMontant: data.SOMME,
-      nbc: data.NBC,
-      nbh: data.NBH,
-      th: data.TH,
-    };
-    //console.log(dt);
-    return dt;
-  }
+
+// functions ----------------------------------------------------------------
+const queryFilter = function (professeur, debit, fin) {
+  let debitDate = new Date(debit);
+  let finDate = new Date(fin);
+  const queryMatch =
+    debit !== undefined && fin !== undefined
+      ? {
+          date: { $gte: debitDate, $lte: finDate },
+          professeur: professeur,
+          isSigned: "effectué",
+          isPaid: "en attente",
+        }
+      : { professeur: professeur, isSigned: "effectué", isPaid: "en attente" };
+
+  return queryMatch;
 };
 module.exports = mongoose.model("Professeur", professeurSchema);

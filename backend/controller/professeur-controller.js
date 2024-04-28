@@ -4,8 +4,69 @@ const Professeur = require("../models/professeur");
 const catchAsync = require("../utils/catchAsync");
 const AppError = require("../utils/appError");
 const Cours = require("../models/cours");
-const professeur = require("../models/professeur");
 const User = require("../auth/models/user");
+
+// Total Paiement Resultat -----------------------------------------------------------------------------------------
+exports.totalResultats = catchAsync(async (req, res, next) => {
+  const id = req.params.id;
+  const matchQuery =
+    req.body.debit !== undefined && req.body.fin !== undefined
+      ? {
+          date: {
+            $gte: new Date(req.body.debit),
+            $lte: new Date(req.body.fin),
+          },
+          isSigned: "effectué",
+          isPaid: "en attente",
+        }
+      : {
+          isSigned: "effectué",
+          isPaid: "en attente",
+        };
+  const result = await Cours.aggregate([
+    {
+      $match: matchQuery,
+    },
+    {
+      $lookup: {
+        from: "professeurs",
+        localField: "professeur",
+        foreignField: "_id",
+        as: "professeurData",
+      },
+    },
+    { $unwind: "$professeurData" },
+    {
+      $lookup: {
+        from: "users",
+        localField: "professeurData.user",
+        foreignField: "_id",
+        as: "userData",
+      },
+    },
+    { $unwind: "$userData" },
+    {
+      $group: {
+        _id: "$professeur",
+        first_cours_date: { $min: "$date" },
+        last_cours_date: { $max: "$date" },
+        nbc: { $sum: 1 },
+        nbh: { $sum: "$nbh" },
+        somme: { $sum: "$somme" },
+        nom: { $first: "$userData.nom" },
+        prenom: { $first: "$userData.prenom" },
+        email: { $first: "$userData.email" },
+        banque: { $first: "$professeurData.banque" },
+        accountNumero: { $first: "$professeurData.accountNumero" },
+        user: { $first: "$userData._id" },
+      },
+    },
+  ]);
+  res.status(200).json({
+    status: "succés",
+    result,
+  });
+});
 //------------------------------------------------get all professeurs ------------------------------------------------ */
 exports.getProfesseurs = catchAsync(async (req, res, next) => {
   let filter = {};
@@ -15,7 +76,15 @@ exports.getProfesseurs = catchAsync(async (req, res, next) => {
     .sort()
     .limitFields()
     .pagination();
-  const professeurs = await features.query;
+  const professeursData = await features.query;
+  const professeurs = professeursData.map((professeur) => ({
+    ...professeur.toObject(),
+    user: professeur.user ? professeur.user._id : null,
+    nom: professeur.user ? professeur.user.nom : null,
+    prenom: professeur.user ? professeur.user.prenom : null,
+    email: professeur.user ? professeur.user.email : null,
+    mobile: professeur.user ? professeur.user.mobile : null,
+  }));
   res.status(200).json({
     status: "succés",
     professeurs,
@@ -70,7 +139,8 @@ exports.deleteProfesseur = catchAsync(async (req, res, next) => {
   }
   res.status(200).json({
     status: "succés",
-    message: professeur.nom,
+    message:
+      "L'eneignant(e) est suupprimé  et ces [ cours, emploi] avec succés .",
   });
 });
 
@@ -84,21 +154,82 @@ exports.getProfesseurById = catchAsync(async (req, res, next) => {
       new AppError("Aucun enseignant trouvé avec cet identifiant !", 404)
     );
   }
-
-  let prof_cours_detail = await Oldprofesseur.DetailNBH_TH_Nbc_Somme();
   let elements = await Oldprofesseur.getElements();
+  /*  
+ 
   let emplois = await Oldprofesseur.getEmplois();
-  let lundi = emplois[0];
+  let lundi = emplois[0]; */
   /*   "2024-02-20T13:36:43.076Z",
     "2024-02-21T13:36:43.076Z" */
-  await Oldprofesseur.getPaiementData();
+  const resultats = await Oldprofesseur.paiementTotalResultats();
   res.status(200).json({
     status: "succés",
-    lundi,
-    emplois,
     elements,
-    prof_cours_detail,
-    professeur: Oldprofesseur,
+    /*    lundi,
+    emplois,
+    prof_cours_detail, 
+    professeur: Oldprofesseur,*/
+    resultats,
+  });
+});
+///GET PROFESSEUR ELEMENTS --------------------------------------------------------------------------------------
+exports.getElements = catchAsync(async (req, res, next) => {
+  const id = req.params.id;
+  console.log(id);
+  const Oldprofesseur = await Professeur.findById(id);
+  if (!Oldprofesseur) {
+    return next(
+      new AppError("Aucun enseignant trouvé avec cet identifiant !", 404)
+    );
+  }
+  let elements = await Oldprofesseur.getElements();
+  res.status(200).json({
+    status: "succés",
+    elements,
+  });
+});
+///GET professeur paiement detail -----------------------------------------------------------------------------------
+exports.paiementDetailResultats = catchAsync(async (req, res, next) => {
+  const id = req.params.id;
+  console.log(id);
+  const Oldprofesseur = await Professeur.findById(id);
+  if (!Oldprofesseur) {
+    return next(
+      new AppError("Aucun enseignant trouvé avec cet identifiant !", 404)
+    );
+  }
+  const resultats = await Oldprofesseur.paiementDetailResultats(
+    req.body.fromDate,
+    req.body.toDate
+  );
+
+  let cours = resultats[0].matieres;
+  let dt = {
+    name: "total",
+    nbh: resultats[0].total.length !== 0 ? resultats[0].total[0].nbh : 0,
+    th: resultats[0].total.length !== 0 ? resultats[0].total[0].th : 0,
+    somme: resultats[0].total.length !== 0 ? resultats[0].total[0].somme : 0,
+    nbc: resultats[0].total.length !== 0 ? resultats[0].total[0].nbc : 0,
+    fromDate:
+      resultats[0].total.length !== 0
+        ? resultats[0].total[0].fromDate
+        : undefined,
+    toDate:
+      resultats[0].total.length !== 0
+        ? resultats[0].total[0].toDate
+        : undefined,
+  };
+  cours.push(dt);
+
+  res.status(200).json({
+    status: "succés",
+    _id: Oldprofesseur._id,
+    nom: Oldprofesseur.user.nom,
+    prenom: Oldprofesseur.user.prenom,
+    email: Oldprofesseur.user.email,
+    accountNumero: Oldprofesseur.accountNumero,
+    banque: Oldprofesseur.banque,
+    cours,
   });
 });
 ///Get Professeur By Email-----------------------------------------------------------------------------------------
