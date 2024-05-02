@@ -45,11 +45,7 @@ const emploiSchema = mongoose.Schema({
     ref: "Element",
     required: [true, "élément est requis !"],
   },
-  classe: String,
   jour: { type: String, lowercase: true },
-  enseignat: String,
-  matiere: String,
-  semestre: Number,
 });
 /* ===================================================================== validate midelwere ======================== */
 /* emploiSchema.pre("validate", async function (next) {
@@ -80,9 +76,6 @@ const emploiSchema = mongoose.Schema({
 /* ===================================================================== save  midelwere ======================== */
 emploiSchema.pre("save", async function (next) {
   const element = await Element.findById(this.element);
-  const filiere = await Filiere.findById(element.filiere);
-  const professeur = await Professeur.findById(this.professeur);
-  console.log(element);
   let type = element["professeur" + this.type];
   /*   let professeur = await Professeur.findById(type);
   this.professeur = professeur._id; */
@@ -117,14 +110,25 @@ emploiSchema.pre("save", async function (next) {
     "Vendredi",
     "Samedi",
   ];
-  this.classe = filiere.niveau + " " + filiere.name;
-  this.semestre = element.semestre;
   this.jour = daysOfWeek[this.dayNumero];
-  this.enseignat = professeur.nom + " " + professeur.prenom;
-  this.matiere = element.name;
   next();
 });
+//FIND MIDELEWEERE TO POPULATE QUERY ---------------------------------------------------------------
+emploiSchema.pre(/^find/, function (next) {
+  this.populate([
+    {
+      path: "professeur",
+      select: "user",
+      populate: {
+        path: "user",
+        select: "nom prenom",
+      },
+    },
+    { path: "filiere", select: "name niveau" },
+  ]);
 
+  next();
+});
 /* ---------------------------------------------------------------------get day name methods---------------------- */
 emploiSchema.methods.getDayName = async function () {
   let daysOfWeek = [

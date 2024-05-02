@@ -17,8 +17,17 @@ exports.getEmplois = catchAsync(async (req, res, next) => {
     .sort()
     .limitFields()
     .pagination();
-  const emplois = await features.query;
-  // const data = functions.emploi_respone(emploi);
+  const emploisData = await features.query;
+  const emplois = emploisData.map((emploi) => ({
+    ...emploi.toObject(),
+    professeur: emploi.professeur ? emploi.professeur._id : null,
+    nomComplet: emploi.professeur.user
+      ? emploi.professeur.user.nom + " " + emploi.professeur.user.prenom
+      : null,
+    filiere: emploi.filiere ? emploi.filiere.name : null,
+    niveau: emploi.filiere ? emploi.filiere.niveau : null,
+  }));
+
   res.status(200).json({
     status: "succés",
     emplois,
@@ -340,7 +349,7 @@ exports.uploadEmplois = catchAsync(async (req, res, next) => {
             y == 1 ? index + 1 : finalJsonData[index + 1].length - 1;
           let professeur_index =
             y == 1 ? index + 2 : finalJsonData[index + 2].length - 1;
-          let matiere =
+          let element_name =
             y == 1
               ? finalJsonData[matiere_index][1].toLowerCase()
               : finalJsonData[index + 1][matiere_index].toLowerCase();
@@ -349,133 +358,104 @@ exports.uploadEmplois = catchAsync(async (req, res, next) => {
               ? finalJsonData[professeur_index][1]
               : finalJsonData[index + 2][professeur_index];
           let element = await Element.findOne({
-            name: matiere,
+            name: element_name,
           });
           let professeur_data = professeur.split("/");
+          let nom = professeur_data[0] != undefined ? professeur_data[0] : "";
+          let prenom =
+            professeur_data[1] != undefined ? professeur_data[1] : "";
           let famille =
-            professeur_data[2] != undefined ? "." + professeur_data[2] : "";
+            professeur_data[2] != undefined ? professeur_data[2] : "";
           let email =
-            professeur_data[1] != undefined
-              ? professeur_data[0] +
-                `.${professeur_data[1]}` +
-                `${famille}` +
-                "@supnum.mr"
-              : professeur_data[0] + `.${professeur_data[0]}` + "@supnum.mr";
+            famille != ""
+              ? nom + `.${prenom}` + `.${famille}` + "@supnum.mr"
+              : prenom != ""
+              ? nom + `.${prenom}` + "@supnum.mr"
+              : nom + `.${nom}` + "@supnum.mr";
           email = email.toLowerCase();
-          let Oldprofesseur = await Professeur.findOne({
+          let OldUser = await User.findOne({
             email: email,
           });
-
-          let data = {
-            jour: x[0],
-            dayNumero: daysOfWeek.indexOf(x[0]),
-            code: x[y],
-            type: x[y + 1],
-            startTime: st,
-            nbh: 1.5,
-            element: element ? element._id : "",
-            professeur: Oldprofesseur ? Oldprofesseur._id : "",
-            matiere: matiere,
-          };
-          if (!Oldprofesseur) {
-            const Olduser = await User.findOne({ email: email });
-            let dt = {
-              nom: professeur_data[0],
-              prenom:
-                professeur_data[1] != undefined
-                  ? professeur_data[1] + " " + famille
-                  : professeur_data[0],
-              email: email,
-              password: "1234@supnum",
-              passwordConfirm: "1234@supnum",
-              photo: "http://localhost:5000/uploads/images/user.png",
-            };
-            const user = Olduser ? Olduser : await User.create(dt);
-            const professeur = await Professeur.create({
-              user: user._id,
-              matieres: element.matiere,
+          if (OldUser) {
+            let Oldprofesseur = await Professeur.findOne({
+              user: OldUser._id,
             });
-            data.professeur = professeur._id;
-          } else {
-            try {
-              await Professeur.updateOne(
-                {
-                  _id: Oldprofesseur._id,
-                },
-                {
-                  $addToSet: {
-                    matieres: element.matiere,
-                  },
-                }
-              );
-            } catch (error) {}
-          }
-          if (!element) {
-            try {
-              const newCategorie = new Categorie({
-                name: data.code.substring(0, 3),
-                description: data.code.substring(0, 3),
-              });
-              await newCategorie.save();
-              let dataM = {
-                categorie: newCategorie._id,
-                name: data.matiere,
+            if (Oldprofesseur) {
+              let data = {
+                jour: x[0],
+                dayNumero: daysOfWeek.indexOf(x[0]),
+                code: x[y],
+                type: x[y + 1],
+                startTime: st,
+                nbh: 1.5,
+                element: element ? element._id : "",
+                professeur: Oldprofesseur ? Oldprofesseur._id : "",
+                element_name: element_name,
               };
-              // const matiere = new Matiere(dataM);
-              // await matiere.save();
-              await Professeur.updateOne(
-                {
-                  _id: Oldprofesseur._id,
-                },
-                {
-                  $addToSet: {
-                    matieres: matiere._id,
-                  },
-                }
-              );
-              const filiere = await Filiere.findOne({ name: filiere });
-              let dt = {
-                matiere: matiere._id,
-                semestre: numero,
-                filiere: filiere._id,
-                professeurCM: Oldprofesseur._id,
-                professeurTD: Oldprofesseur._id,
-                professeurTP: Oldprofesseur._id,
-              };
+              if (!element) {
+                try {
+                  const newCategorie = new Categorie({
+                    name: data.code.substring(0, 3),
+                    description: data.code.substring(0, 3),
+                  });
+                  await newCategorie.save();
+                  const filiere = await Filiere.findOne({ name: filiere });
+                  let dt = {
+                    categorie: newCategorie._id,
+                    semestre: numero,
+                    filiere: filiere._id,
+                    professeurCM: Oldprofesseur._id,
+                    professeurTD: Oldprofesseur._id,
+                    professeurTP: Oldprofesseur._id,
+                  };
 
-              const element = await Element.create(dt);
-              data.element = element._id;
-            } catch (error) {}
-          } else {
-            await Element.updateOne(
-              {
-                _id: element._id,
-              },
-              {
-                $addToSet: {
-                  professeurCM: Oldprofesseur._id,
-                  professeurTP: Oldprofesseur._id,
-                  professeurTD: Oldprofesseur._id,
-                },
+                  const element = await Element.create(dt);
+                  data.element = element._id;
+                } catch (error) {
+                  console.log("save new element error .......");
+                  console.log(error.message);
+                }
+              } else {
+                await Element.updateOne(
+                  {
+                    _id: element._id,
+                  },
+                  {
+                    $addToSet: {
+                      professeurCM: Oldprofesseur._id,
+                      professeurTP: Oldprofesseur._id,
+                      professeurTD: Oldprofesseur._id,
+                    },
+                  }
+                );
               }
-            );
-          }
-          /* -----------------------------------------------------Creation d'emploi----------------------------------------- */
-          const cours_list = await Emploi.find({
-            professeur: data.professeur,
-            dayNumero: data.dayNumero,
-          });
-          const result_prof = VERIFICATION(data, cours_list, "enseigant");
-          if (result_prof[0] == "failed") {
-            message =
-              "Le fichier est téléchargé et les emplois ajoutée avec succés, et certaines emplois n'ont pas été enregistrées en rasion de la synchronisation de leur calender avec d'autre emplois";
-            /*   console.log(result_prof[0]);
-             return next(new AppError(`${result_prof[1]}`, 404)); */
+              /* -----------------------------------------------------Creation d'emploi----------------------------------------- */
+              const cours_list = await Emploi.find({
+                professeur: data.professeur,
+                dayNumero: data.dayNumero,
+              });
+              const result_prof = VERIFICATION(data, cours_list, "enseigant");
+              if (result_prof[0] == "failed") {
+                message =
+                  "Le fichier est téléchargé et les emplois ajoutée avec succés, et certaines emplois n'ont pas été enregistrées en rasion de la synchronisation de leur calender avec d'autre emplois";
+                /*   console.log(result_prof[0]);
+                 return next(new AppError(`${result_prof[1]}`, 404)); */
+              } else {
+                try {
+                  let emploi = new Emploi(data);
+                  emploi = await emploi.save();
+                  emplois.push(emploi);
+                  console.log(emploi);
+                } catch (error) {
+                  console.log("save new emploi error .......");
+                  console.log(error.message);
+                }
+              }
+            } else {
+              message = `Le professeur avec cet email(${email}) n'existe pas !`;
+            }
           } else {
-            let emploi = new Emploi(data);
-            emploi = await emploi.save();
-            emplois.push(emploi);
-            console.log(emploi);
+            message = `Le professeur avec cet email(${email}) n'existe pas et l'utilisateur non plus !`;
           }
         }
       }

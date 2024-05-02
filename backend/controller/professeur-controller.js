@@ -93,10 +93,19 @@ exports.getProfesseurs = catchAsync(async (req, res, next) => {
 
 //ADD NEW PROFESSEUR -----------------------------------------------------------------------------
 exports.addProfesseur = catchAsync(async (req, res, next) => {
-  const data = req.body;
+  const user = await User.findById(req.body.user);
+  if (user) {
+    const old_professeur = await Professeur.findOne(user._id);
+    if (old_professeur) {
+      return next(
+        new AppError("L'identifient d'utilisateur n'est pas valide !", 401)
+      );
+    }
+  } else {
+    return next(new AppError("Aucun utilisateur n'est trouver avec ID !", 401));
+  }
   const professeur = new Professeur({
     user: req.body.user,
-    elements: req.body.elements,
     accountNumero: req.body.accountNumero,
     banque: req.body.banque,
   });
@@ -154,7 +163,6 @@ exports.getProfesseurById = catchAsync(async (req, res, next) => {
       new AppError("Aucun enseignant trouvé avec cet identifiant !", 404)
     );
   }
-  let elements = await Oldprofesseur.getElements();
   /*  
  
   let emplois = await Oldprofesseur.getEmplois();
@@ -164,7 +172,6 @@ exports.getProfesseurById = catchAsync(async (req, res, next) => {
   const resultats = await Oldprofesseur.paiementTotalResultats();
   res.status(200).json({
     status: "succés",
-    elements,
     /*    lundi,
     emplois,
     prof_cours_detail, 

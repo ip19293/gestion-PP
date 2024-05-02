@@ -14,7 +14,13 @@ const filterOb = (obj, ...allowedFields) => {
 };
 // 1) get All User
 exports.getUsers = catchAsync(async (req, res, next) => {
-  const features = new APIFeatures(User.find().select("+active"), req.query);
+  let filter = {};
+  if (req.params.id) filter = { cours: req.params.id };
+  const features = new APIFeatures(User.find().select("+active"), req.query)
+    .filter()
+    .sort()
+    .limitFields()
+    .pagination();
   const users = await features.query;
 
   res.status(200).json({
@@ -43,10 +49,8 @@ exports.deleteAllUsers = catchAsync(async (req, res, next) => {
 });
 // 3) Create new User
 exports.addUser = catchAsync(async (req, res, next) => {
-  let professeur = {};
-  const fileName = req.file.filename;
+  const fileName = req.file ? req.file.filename : "";
   const basePath = `${req.protocol}://${req.get("host")}/uploads/images/`;
-
   const user = await User.create({
     nom: req.body.nom,
     prenom: req.body.prenom,
@@ -57,27 +61,12 @@ exports.addUser = catchAsync(async (req, res, next) => {
     passwordConfirm: req.body.passwordConfirm,
     passwordChangedAt: req.body.passwordChangedAt,
     role: req.body.role,
-    accountNumero: req.body.accountNumero,
-    banque: req.body.banque,
   });
-  if (req.body.role === "professeur") {
-    professeur = await Professeur.create({
-      user: user._id,
-    });
-  }
-  let data =
-    req.body.role === "professeur"
-      ? {
-          user: user,
-          professeur: professeur,
-        }
-      : {
-          user: user,
-        };
+
   res.status(200).json({
     status: "succés",
     message: `L'utilisateur est ajouter avec succés`,
-    data: data,
+    user,
   });
 });
 // active or deactive user

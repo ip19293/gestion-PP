@@ -46,40 +46,77 @@ const createSendToken = async (user, statusCode, res, message) => {
 };
 /* =================================================================SIGNUP ================================================== */
 exports.singup = catchAsync(async (req, res, next) => {
-  const newUser = await User.create({
-    nom: req.body.nom,
-    prenom: req.body.prenom,
-    password: req.body.password,
-    passwordConfirm: req.body.passwordConfirm,
-    email: req.body.email,
-    mobile: req.body.mobile,
-  });
-  /*  if (user.role === "professeur") {
-    const prof = await Professeur.findOne({
-      accountNumero: req.body.accountNumero,
-    });
-    if (prof) {
-      return next(
-        new AppError("Veuillez vérifier votre numéro de compte banque !", 400)
-      );
+  message = "";
+  const email = req.body.email;
+  const password = req.body.password;
+  // 2) check if user exists && password is correct
+  let user = await User.findOne({ email })
+    .select("+password")
+    .select("+active");
+  if (user) {
+    if (!(await user.correctPassword(password, user.password))) {
+      return next(new AppError("E-mail ou mot de passe incorrect !", 401));
     }
-    if (req.body.accountNumero.toString().length !== 10) {
+    if (user.role === "professeur") {
+      let old_professeur = await Professeur.findOne({ user: user._id });
+      if (old_professeur) {
+        let prof = await Professeur.findOne({
+          accountNumero: req.body.accountNumero,
+          _id: { $ne: old_professeur._id },
+        });
+        if (prof) {
+          return next(
+            new AppError("Le numero de compte banque n'est pas valide !", 401)
+          );
+        }
+        old_professeur.accountNumero = req.body.accountNumero;
+        old_professeur.banque = req.body.banque;
+        await old_professeur.save();
+        message = `Les informations de professeur qui utilise cette compte est ajouter avec success .`;
+      } else {
+        let prof = await Professeur.findOne({
+          accountNumero: req.body.accountNumero,
+        });
+        if (prof) {
+          return next(
+            new AppError("Le numero de compte banque n'est pas valide !", 401)
+          );
+        }
+        const professeur = await Professeur.create({
+          user: user._id,
+          accountNumero: req.body.accountNumero,
+          banque: req.body.banque,
+        });
+        if (professeur) {
+          message = `Le professeur qui utilise cette compte est ajouter avec success .`;
+        }
+      }
+    }
+    if (user.active == false) {
       return next(
         new AppError(
-          " Le numéro de compte doit avoir une longueur de 10 chiffres !",
-          400
+          "Votre compte est désactivé, veuillez contacter l'administrateur !",
+          401
         )
       );
     }
-    const professeur = await Professeur.create({
-      user: user._id,
-      accountNumero: req.body.accountNumero,
-      banque: req.body.banque,
+  } else {
+    const fileName = req.file ? req.file.filename : "";
+    const basePath = `${req.protocol}://${req.get("host")}/uploads/images/`;
+    user = await User.create({
+      nom: req.body.nom,
+      prenom: req.body.prenom,
+      mobile: req.body.mobile,
+      photo: `${basePath}${fileName}`,
+      email: req.body.email,
+      password: req.body.password,
+      passwordConfirm: req.body.passwordConfirm,
+      passwordChangedAt: req.body.passwordChangedAt,
     });
-  } */
+  }
 
-  message = "Votre comple est crée avec succéss .";
-  createSendToken(newUser, 201, res, message);
+  message = message === "" ? "Votre comple est crée avec succéss ." : message;
+  createSendToken(user, 201, res, message);
 });
 /* ====================================================================LOGIN ============================== */
 exports.login = catchAsync(async (req, res, next) => {
@@ -108,11 +145,78 @@ exports.login = catchAsync(async (req, res, next) => {
     return next(
       new AppError(
         "Votre compte est désactivé, veuillez contacter l'administrateur !",
-        401
+        406
       )
     );
   }
+  if (user.role === "professeur") {
+    const old_professeur = await Professeur.findOne({ user: user._id });
+    if (old_professeur) {
+      let accountNumero_singe = old_professeur.accountNumero.split("-");
+      if (accountNumero_singe.length > 1) {
+        return next(
+          new AppError(
+            "Votre compte est inaccessible, veuillez visiter la page d'inscrition pour completer votre information par la numero de compte !",
+            406
+          )
+        );
+      }
+    } else {
+      return next(
+        new AppError(
+          "Votre compte est inaccessible, veuillez visiter la page d'inscrition pour completer votre information  !",
+          405
+        )
+      );
+    }
+  }
   message = `Bienvenue ${user.role}`;
+  // 3) send token to client if verification is ok
+  createSendToken(user, 200, res, message);
+});
+/* ====================================================================VERIFICATION ============================== */
+exports.verification = catchAsync(async (req, res, next) => {
+  let message = "";
+  const email = req.body.email;
+  const password = req.body.password;
+  // 1) check if email and password exist
+  if (!email || !password) {
+    return next(
+      new AppError(
+        "Veuillez fournir votre adresse e-mail et votre mot de passe!",
+        400
+      )
+    );
+  }
+
+  // 2) check if user exists && password is correct
+  const user = await User.findOne({ email })
+    .select("+password")
+    .select("+active");
+  if (!user || !(await user.correctPassword(password, user.password))) {
+    return next(new AppError("E-mail ou mot de passe incorrect !", 401));
+  }
+
+  if (user.active == false) {
+    return next(
+      new AppError(
+        "Votre compte est désactivé, veuillez contacter l'administrateur !",
+        406
+      )
+    );
+  }
+  if (user.role === "professeur") {
+    const old_professeur = await Professeur.findOne({ user: user._id });
+    if (old_professeur) {
+      let accountNumero_singe = old_professeur.accountNumero.split("-");
+      if (accountNumero_singe.length > 1) {
+        message = `Veuillez completer les informations de votre compte pour l'accés`;
+      }
+    } else {
+      message = `Veuillez enregistrer les informations de votre compte pour l'accés`;
+    }
+  }
+  message = message === "" ? `Bienvenue ${user.role}` : message;
   // 3) send token to client if verification is ok
   createSendToken(user, 200, res, message);
 });

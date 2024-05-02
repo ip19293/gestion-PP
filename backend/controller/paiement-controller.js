@@ -20,7 +20,7 @@ exports.getPaiements = catchAsync(async (req, res, next) => {
     ...paiement.toObject(),
     professeur: paiement.professeur ? paiement.professeur._id : null,
     nomComplet: paiement.professeur.user
-      ? paiement.professeur.user.nom + " " + paiement.professeur.user.nom
+      ? paiement.professeur.user.nom + " " + paiement.professeur.user.prenom
       : null,
     banque: paiement.professeur ? paiement.professeur.banque : null,
     accountNumero: paiement.professeur
@@ -136,16 +136,18 @@ exports.getInformation = catchAsync(async (req, res, next) => {
 exports.addManyPaiements = catchAsync(async (req, res, next) => {
   const data = req.body.ids;
   let new_add = false;
-  //filter cours liste by professeurs ids between debit and fin
-  for (id of data) {
-    let professeur = await Professeur.findById(id);
+  if (!Array.isArray(data)) {
+    return next(new AppError("Aucun professeur n'est selectionner  !", 404));
+  }
+  for (let prof_id of data) {
+    let professeur = await Professeur.findById(prof_id);
     if (professeur) {
       let resultat = await professeur.paiementTotalResultats(
         req.body.fromDate,
         req.body.fin
       );
       if (resultat.length != 0) {
-        let old_paiement = await Paiement.findOne({ professeur: id });
+        let old_paiement = await Paiement.findOne({ professeur: prof_id });
         if (!old_paiement || old_paiement.status == "terminé") {
           let paiement = await Paiement.create({
             fromDate: resultat[0].fromDate,
@@ -160,6 +162,7 @@ exports.addManyPaiements = catchAsync(async (req, res, next) => {
       }
     }
   }
+
   let message = new_add
     ? "Des nouvelles factures de paiement sont crée et envoié vers les professeurs corespondant ."
     : "Pas des nouvelles factures de paiement sont crer !";
