@@ -68,6 +68,9 @@ exports.addPaiement = catchAsync(async (req, res, next) => {
     toDate: resultat[0].toDate,
     professeur: resultat[0].professeur,
     somme: resultat[0].somme,
+    nbh: resultat[0].nbh,
+    nbc: resultat[0].nbc,
+    th: resultat[0].th,
   };
 
   const new_paiement = await Paiement.create(paiement_data);

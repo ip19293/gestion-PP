@@ -25,6 +25,23 @@ const paiementSchema = mongoose.Schema(
       select: true,
       required: true,
     },
+
+    nbc: {
+      type: Number,
+      select: true,
+      required: true,
+    },
+    nbh: {
+      type: Number,
+      select: true,
+      required: true,
+    },
+    th: {
+      type: Number,
+      select: true,
+      required: true,
+    },
+
     professeur: {
       type: mongoose.Schema.ObjectId,
       ref: "Professeur",
