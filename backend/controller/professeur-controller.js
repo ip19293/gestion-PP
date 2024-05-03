@@ -9,6 +9,7 @@ const User = require("../auth/models/user");
 // Total Paiement Resultat -----------------------------------------------------------------------------------------
 exports.totalResultats = catchAsync(async (req, res, next) => {
   const id = req.params.id;
+
   const matchQuery =
     req.body.debit !== undefined && req.body.fin !== undefined
       ? {
@@ -48,6 +49,13 @@ exports.totalResultats = catchAsync(async (req, res, next) => {
     {
       $group: {
         _id: "$professeur",
+        fromDate: {
+          $first:
+            req.body.debit !== undefined ? req.body.debit : { $min: "$date" },
+        },
+        toDate: {
+          $first: req.body.fin !== undefined ? req.body.fin : { $max: "$date" },
+        },
         first_cours_date: { $min: "$date" },
         last_cours_date: { $max: "$date" },
         nbc: { $sum: 1 },
@@ -189,7 +197,16 @@ exports.getElements = catchAsync(async (req, res, next) => {
       new AppError("Aucun enseignant trouvé avec cet identifiant !", 404)
     );
   }
-  let elements = await Oldprofesseur.getElements();
+  let elements = await Oldprofesseur.getElements(req.body.type);
+  /*   const TD = TDdata.map((element) => ({
+    ...element.toObject(),
+    filiere_id: element.filiere ? element.filiere._id : null,
+    filiere: element.filiere ? element.filiere.name : null,
+    niveau: element.filiere ? element.filiere.niveau : null,
+    professeurCM: undefined,
+    professeurTP: undefined,
+    professeurTD: undefined,
+  })); */
   res.status(200).json({
     status: "succés",
     elements,
@@ -224,6 +241,14 @@ exports.paiementDetailResultats = catchAsync(async (req, res, next) => {
     toDate:
       resultats[0].total.length !== 0
         ? resultats[0].total[0].toDate
+        : undefined,
+    first_cours_date:
+      resultats[0].total.length !== 0
+        ? resultats[0].total[0].first_cours_date
+        : undefined,
+    last_cours_date:
+      resultats[0].total.length !== 0
+        ? resultats[0].total[0].last_cours_date
         : undefined,
   };
   cours.push(dt);

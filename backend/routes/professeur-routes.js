@@ -65,7 +65,7 @@ router
   );
 router
   .route("/:id/elements")
-  .get(authController.protect, professeurController.getElements);
+  .post(authController.protect, professeurController.getElements);
 
 router
   .route("/:id")

@@ -55,7 +55,6 @@ app.use(helmet());
 const limiter = rateLimit({
   max: 10,
   windowMs: 60 * 60 * 1000,
-
   error: {
     status: "fail",
     message: "To many request from IP , Please try again in an hour!",

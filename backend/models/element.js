@@ -89,7 +89,7 @@ elementSchema.pre(/^find/, function (next) {
         select: "nom prenom",
       },
     },
-    { path: "filiere", select: "name" },
+    { path: "filiere", select: "name niveau" },
   ]);
 
   next();

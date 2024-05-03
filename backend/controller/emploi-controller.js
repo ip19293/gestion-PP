@@ -63,15 +63,14 @@ exports.addEmploi = catchAsync(async (req, res, next) => {
     let prof = professeurs.find((el) =>
       el.equals(new mongoose.Types.ObjectId(req.body.professeur))
     );
-    console.log(new mongoose.Types.ObjectId(req.body.professeur));
-    //let professeur = await Professeur.findById(type);
+
     if (!prof) {
-      /*   return next(
+      return next(
         new AppError(
           `Ce professeur  ne fait pas partie des professeurs de ${req.body.type}  pour  l'elément !`,
           404
         )
-      ); */
+      );
     }
   }
 

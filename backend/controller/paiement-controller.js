@@ -82,45 +82,67 @@ exports.addPaiement = catchAsync(async (req, res, next) => {
 });
 // 4) Get payement informatiom ---------------------------------------------------------------------------------------
 exports.getInformation = catchAsync(async (req, res, next) => {
-  const professeurs = await Professeur.find({ nbc: { $gte: 1 } });
-  let query =
-    req.body.fromDate !== undefined && req.body.fin !== undefined
+  const matchQuery =
+    req.body.debit !== undefined && req.body.fin !== undefined
       ? {
-          date: { $gte: req.body.debit, $lte: req.body.fin },
+          date: {
+            $gte: new Date(req.body.debit),
+            $lte: new Date(req.body.fin),
+          },
           isSigned: "effectué",
           isPaid: "en attente",
         }
-      : { isSigned: "effectué", isPaid: "en attente" };
-  let firstCours = await Cours.findOne(query).sort({
-    date: 1,
-  });
-  let lastCours = await Cours.findOne(query).sort({
-    date: -1,
-  });
-  let firstCoursDate = firstCours ? firstCours.date : new Date();
-  let lastCoursDate = lastCours ? lastCours.date : new Date();
-  const diffenceMs = lastCoursDate.getTime() - firstCoursDate.getTime();
-  let daysDifference = diffenceMs / (1000 * 60 * 60 * 24);
-  const monthDifference = Math.floor(daysDifference / 30.44);
-  const remainingDaysAfterMonths = daysDifference % 30.44;
-  const remainingWeeksAfterMonths = Math.floor(remainingDaysAfterMonths / 7);
-  const remainingDaysAfterWeeks = remainingDaysAfterMonths % 7;
-  let nombresProfesseurs = 0;
-  let somme = 0;
-  let nbc = 0;
-  for (elem of professeurs) {
-    let prof_detail = await elem.DetailNBH_TH_Nbc_Somme(
-      req.body.debit,
-      req.body.fin
-    );
-    let data = prof_detail.cours[0].total[0];
-    if (data) {
-      nombresProfesseurs = nombresProfesseurs + 1;
-      somme = somme + data.SOMME;
-      nbc = nbc + data.NBC;
-    }
-  }
-  let info = {
+      : {
+          isSigned: "effectué",
+          isPaid: "en attente",
+        };
+
+  const result = await Cours.aggregate([
+    {
+      $match: matchQuery,
+    },
+    {
+      $lookup: {
+        from: "professeurs",
+        localField: "professeur",
+        foreignField: "_id",
+        as: "professeurData",
+      },
+    },
+    { $unwind: "$professeurData" },
+    {
+      $lookup: {
+        from: "users",
+        localField: "professeurData.user",
+        foreignField: "_id",
+        as: "userData",
+      },
+    },
+    { $unwind: "$userData" },
+    {
+      $group: {
+        _id: null,
+        fromDate: {
+          $first:
+            req.body.debit !== undefined ? req.body.debit : { $min: "$date" },
+        },
+        toDate: {
+          $first: req.body.fin !== undefined ? req.body.fin : { $max: "$date" },
+        },
+        first_cours_date: { $min: "$date" },
+        last_cours_date: { $max: "$date" },
+        nbc: { $sum: 1 },
+        nbh: { $sum: "$nbh" },
+        somme: { $sum: "$somme" },
+        nombresProfesseurs: {
+          $push: {
+            prof_id: "$professeur",
+          },
+        },
+      },
+    },
+  ]);
+  /*   let info = {
     fromDate: firstCoursDate,
     toDate: lastCoursDate,
     months: monthDifference,
@@ -129,10 +151,10 @@ exports.getInformation = catchAsync(async (req, res, next) => {
     nombresProfesseurs,
     somme,
     nbc,
-  };
+  }; */
   res.status(200).json({
     status: "success",
-    info,
+    result,
   });
 });
 // 4) Create many paiements ---------------------------------------------------------------------------------------
@@ -140,7 +162,7 @@ exports.addManyPaiements = catchAsync(async (req, res, next) => {
   const data = req.body.ids;
   let new_add = false;
   if (!Array.isArray(data)) {
-    return next(new AppError("Aucun professeur n'est selectionner  !", 404));
+    //return next(new AppError("Aucun professeur n'est selectionner  !", 404));
   }
   for (let prof_id of data) {
     let professeur = await Professeur.findById(prof_id);

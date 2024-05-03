@@ -85,8 +85,14 @@ professeurSchema.methods.paiementTotalResultats = async function (debit, fin) {
     {
       $group: {
         _id: null,
-        fromDate: { $min: "$date" },
-        toDate: { $max: "$date" },
+        fromDate: {
+          $first: debit !== undefined ? debit : { $min: "$date" },
+        },
+        toDate: {
+          $first: fin !== undefined ? fin : { $max: "$date" },
+        },
+        first_cours_date: { $min: "$date" },
+        last_cours_date: { $max: "$date" },
         nbc: { $sum: 1 },
         nbh: { $sum: "$nbh" },
         th: { $sum: "$th" },
@@ -144,8 +150,14 @@ professeurSchema.methods.paiementDetailResultats = async function (debit, fin) {
           {
             $group: {
               _id: null,
-              fromDate: { $min: "$date" },
-              toDate: { $max: "$date" },
+              fromDate: {
+                $first: debit !== undefined ? debit : { $min: "$date" },
+              },
+              toDate: {
+                $first: fin !== undefined ? fin : { $max: "$date" },
+              },
+              first_cours_date: { $min: "$date" },
+              last_cours_date: { $max: "$date" },
               nbc: { $sum: 1 },
               nbh: { $sum: "$nbh" },
               th: { $sum: "$th" },
@@ -163,22 +175,57 @@ professeurSchema.methods.paiementDetailResultats = async function (debit, fin) {
 /* ----------------------------------------------------------get professeur elements method------------------------------------ */
 professeurSchema.methods.getElements = async function (type) {
   const Element = require("./element");
-  const professeur = await this.constructor.findById(this._id);
-  let elements = [];
+  let query = {};
   if (type != undefined) {
     let profCT = "professeur" + type;
-    const query = {};
-    query[profCT] = { $in: [professeur._id] };
-    elements = await Element.find(query);
+    query[profCT] = { $in: [this._id] };
   } else {
-    elements = await Element.find({
+    query = {
       $or: [
         { professeurCM: { $in: [this._id] } },
         { professeurTP: { $in: [this._id] } },
         { professeurTD: { $in: [this._id] } },
       ],
-    });
+    };
   }
+  let elements = await Element.aggregate([
+    { $match: query },
+    {
+      $lookup: {
+        from: "filieres",
+        localField: "filiere",
+        foreignField: "_id",
+        as: "filiereData",
+      },
+    },
+    { $unwind: "$filiereData" },
+    {
+      $lookup: {
+        from: "categories",
+        localField: "categorie",
+        foreignField: "_id",
+        as: "categorieData",
+      },
+    },
+    { $unwind: "$categorieData" },
+
+    {
+      $group: {
+        _id: "$_id",
+        name: { $first: "$name" },
+        semestre: { $first: "$semestre" },
+        heuresCM: { $first: "$heuresCM" },
+        heuresTD: { $first: "$heuresTD" },
+        heuresTP: { $first: "$heuresTP" },
+        type: { $first: type != undefined ? type : "ALL" },
+        code: { $first: "$code" },
+        filiere: { $first: "$filiereData.name" },
+        filiere_id: { $first: "$filiereData._id" },
+        categorie_id: { $first: "$categorieData._id" },
+        prix: { $first: "$categorieData.prix" },
+      },
+    },
+  ]);
 
   return elements;
 };
