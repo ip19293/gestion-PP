@@ -122,39 +122,75 @@ exports.getInformation = catchAsync(async (req, res, next) => {
     {
       $group: {
         _id: null,
-        fromDate: {
-          $first:
-            req.body.debit !== undefined ? req.body.debit : { $min: "$date" },
-        },
-        toDate: {
-          $first: req.body.fin !== undefined ? req.body.fin : { $max: "$date" },
-        },
         first_cours_date: { $min: "$date" },
         last_cours_date: { $max: "$date" },
+        fromDate: {
+          $min: {
+            $cond: [
+              { $eq: [req.body.debit, undefined] },
+              "$date",
+              new Date(req.body.debit),
+            ],
+          },
+        },
+        toDate: {
+          $max: {
+            $cond: [
+              { $eq: [req.body.fin, undefined] },
+              "$date",
+              new Date(req.body.fin),
+            ],
+          },
+        },
+
         nbc: { $sum: 1 },
         nbh: { $sum: "$nbh" },
         somme: { $sum: "$somme" },
-        nombresProfesseurs: {
-          $push: {
-            prof_id: "$professeur",
-          },
+        nombresProfesseurs: { $addToSet: "$professeur" },
+      },
+    },
+    {
+      $project: {
+        _id: 0,
+        fromDate: 1,
+        toDate: 1,
+        nombresProfesseurs: { $size: "$nombresProfesseurs" },
+        nbc: 1,
+        nbh: 1,
+        somme: 1,
+        first_cours_date: 1,
+        last_cours_date: 1,
+        days: {
+          $divide: [
+            {
+              $subtract: ["$toDate", "$fromDate"],
+            },
+            1000 * 60 * 60 * 24,
+          ],
+        },
+        weeks: {
+          $divide: [
+            {
+              $subtract: ["$toDate", "$fromDate"],
+            },
+            1000 * 60 * 60 * 24 * 7,
+          ],
+        },
+        months: {
+          $divide: [
+            {
+              $subtract: ["$toDate", "$fromDate"],
+            },
+            1000 * 60 * 60 * 24 * 30,
+          ],
         },
       },
     },
   ]);
-  /*   let info = {
-    fromDate: firstCoursDate,
-    toDate: lastCoursDate,
-    months: monthDifference,
-    weeks: remainingWeeksAfterMonths,
-    days: remainingDaysAfterWeeks,
-    nombresProfesseurs,
-    somme,
-    nbc,
-  }; */
+
   res.status(200).json({
     status: "success",
-    result,
+    info: result[0],
   });
 });
 // 4) Create many paiements ---------------------------------------------------------------------------------------
@@ -162,7 +198,7 @@ exports.addManyPaiements = catchAsync(async (req, res, next) => {
   const data = req.body.ids;
   let new_add = false;
   if (!Array.isArray(data)) {
-    //return next(new AppError("Aucun professeur n'est selectionner  !", 404));
+    return next(new AppError("Aucun professeur n'est selectionner  !", 404));
   }
   for (let prof_id of data) {
     let professeur = await Professeur.findById(prof_id);
@@ -178,6 +214,9 @@ exports.addManyPaiements = catchAsync(async (req, res, next) => {
             fromDate: resultat[0].fromDate,
             toDate: resultat[0].toDate,
             somme: resultat[0].somme,
+            nbc: resultat[0].nbc,
+            nbh: resultat[0].nbh,
+            th: resultat[0].th,
             professeur: resultat[0].professeur,
           });
           if (paiement) {

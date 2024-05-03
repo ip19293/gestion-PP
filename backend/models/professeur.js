@@ -86,10 +86,14 @@ professeurSchema.methods.paiementTotalResultats = async function (debit, fin) {
       $group: {
         _id: null,
         fromDate: {
-          $first: debit !== undefined ? debit : { $min: "$date" },
+          $min: {
+            $cond: [{ $eq: [debit, undefined] }, "$date", new Date(debit)],
+          },
         },
         toDate: {
-          $first: fin !== undefined ? fin : { $max: "$date" },
+          $max: {
+            $cond: [{ $eq: [fin, undefined] }, "$date", new Date(fin)],
+          },
         },
         first_cours_date: { $min: "$date" },
         last_cours_date: { $max: "$date" },
@@ -151,10 +155,18 @@ professeurSchema.methods.paiementDetailResultats = async function (debit, fin) {
             $group: {
               _id: null,
               fromDate: {
-                $first: debit !== undefined ? debit : { $min: "$date" },
+                $min: {
+                  $cond: [
+                    { $eq: [debit, undefined] },
+                    "$date",
+                    new Date(debit),
+                  ],
+                },
               },
               toDate: {
-                $first: fin !== undefined ? fin : { $max: "$date" },
+                $max: {
+                  $cond: [{ $eq: [fin, undefined] }, "$date", new Date(fin)],
+                },
               },
               first_cours_date: { $min: "$date" },
               last_cours_date: { $max: "$date" },

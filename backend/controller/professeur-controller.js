@@ -50,11 +50,22 @@ exports.totalResultats = catchAsync(async (req, res, next) => {
       $group: {
         _id: "$professeur",
         fromDate: {
-          $first:
-            req.body.debit !== undefined ? req.body.debit : { $min: "$date" },
+          $min: {
+            $cond: [
+              { $eq: [req.body.debit, undefined] },
+              "$date",
+              new Date(req.body.debit),
+            ],
+          },
         },
         toDate: {
-          $first: req.body.fin !== undefined ? req.body.fin : { $max: "$date" },
+          $max: {
+            $cond: [
+              { $eq: [req.body.fin, undefined] },
+              "$date",
+              new Date(req.body.fin),
+            ],
+          },
         },
         first_cours_date: { $min: "$date" },
         last_cours_date: { $max: "$date" },
@@ -180,11 +191,7 @@ exports.getProfesseurById = catchAsync(async (req, res, next) => {
   const resultats = await Oldprofesseur.paiementTotalResultats();
   res.status(200).json({
     status: "succés",
-    /*    lundi,
-    emplois,
-    prof_cours_detail, 
-    professeur: Oldprofesseur,*/
-    resultats,
+    professeur: Oldprofesseur,
   });
 });
 ///GET PROFESSEUR ELEMENTS --------------------------------------------------------------------------------------
@@ -198,17 +205,10 @@ exports.getElements = catchAsync(async (req, res, next) => {
     );
   }
   let elements = await Oldprofesseur.getElements(req.body.type);
-  /*   const TD = TDdata.map((element) => ({
-    ...element.toObject(),
-    filiere_id: element.filiere ? element.filiere._id : null,
-    filiere: element.filiere ? element.filiere.name : null,
-    niveau: element.filiere ? element.filiere.niveau : null,
-    professeurCM: undefined,
-    professeurTP: undefined,
-    professeurTD: undefined,
-  })); */
+
   res.status(200).json({
     status: "succés",
+    professeur: Oldprofesseur,
     elements,
   });
 });
