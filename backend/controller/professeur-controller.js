@@ -90,6 +90,7 @@ exports.totalResultats = catchAsync(async (req, res, next) => {
 exports.getProfesseurs = catchAsync(async (req, res, next) => {
   let filter = {};
   if (req.params.id) filter = { cours: req.params.id };
+
   const features = new APIFeatures(Professeur.find(), req.query)
     .filter()
     .sort()
@@ -280,15 +281,21 @@ exports.addElementToProfesseur = catchAsync(async (req, res, next) => {
       new AppError("Aucun enseignant trouvé avec cet identifiant !", 404)
     );
   }
-  let type = "professeur" + req.params.type;
-  const query = {
-    $addToSet: {
-      professeurCM: id,
-      professeurTD: id,
-      professeurTP: id,
-    },
-  };
-  // query.$addToSet[type] = id;
+  let type = "professeur" + req.body.type;
+  let query =
+    req.body.type === undefined
+      ? {
+          $addToSet: {
+            professeurCM: id,
+            professeurTD: id,
+            professeurTP: id,
+          },
+        }
+      : {
+          $addToSet: {
+            [type]: id,
+          },
+        };
 
   const element = await Element.findByIdAndUpdate(
     { _id: req.params.idM },
@@ -297,12 +304,14 @@ exports.addElementToProfesseur = catchAsync(async (req, res, next) => {
   );
   if (!element) {
     return next(
-      new AppError("Aucun enseignant trouvé avec cet identifiant !", 404)
+      new AppError("Aucun element trouvé avec cet identifiant !", 404)
     );
   }
   res.status(200).json({
     status: "succés",
-    message: `L'enseigant ${Oldprofesseur.nom} ${Oldprofesseur.prenom}  est ajouté a l'élément ${element.name} CM, TD, TP professeurs  avec succés .`,
+    message: `L'élément  ${element.name} est ajouté au liste   ${
+      req.body.type != undefined ? req.body.type : "CM, TD, TP"
+    } professeur  avec succés .`,
     element,
   });
 });
@@ -316,12 +325,15 @@ exports.removeElementFromProfesseur = catchAsync(async (req, res, next) => {
       new AppError("Aucun enseignant trouvé avec cet identifiant !", 404)
     );
   }
-  let type = "professeur" + req.params.type;
-  const query = {
-    $pull: { professeurCM: id, professeurTD: id, professeurTP: id },
-  };
-  //query.$pull[type] = id;
-
+  let type = "professeur" + req.body.type;
+  const query =
+    req.body.type === undefined
+      ? {
+          $pull: { professeurCM: id, professeurTD: id, professeurTP: id },
+        }
+      : {
+          $pull: { [type]: id },
+        };
   const element = await Element.findByIdAndUpdate(
     { _id: req.params.idM },
     query,
@@ -329,12 +341,14 @@ exports.removeElementFromProfesseur = catchAsync(async (req, res, next) => {
   );
   if (!element) {
     return next(
-      new AppError("Aucun enseignant trouvé avec cet identifiant !", 404)
+      new AppError("Aucun element trouvé avec cet identifiant !", 404)
     );
   }
   res.status(200).json({
     status: "succés",
-    message: `L'enseigant ${Oldprofesseur.nom} ${Oldprofesseur.prenom}  est supprimé de l'élément ${element.name} CM, TD, TP professeurs  avec succés .`,
+    message: `L'élément ${element.name}  est supprimé de liste   ${
+      req.body.type != undefined ? req.body.type : "CM, TD, TP"
+    } de professeur  avec succés .`,
     element,
   });
 });
