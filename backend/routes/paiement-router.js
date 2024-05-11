@@ -6,7 +6,7 @@ paiementRouter
   .route("/")
   .get(
     authController.protect,
-    authController.restricTo("admin"),
+    // authController.restricTo("admin"),
     paiementController.getPaiements
   )
   .post(
@@ -28,7 +28,20 @@ paiementRouter
     authController.restricTo("admin"),
     paiementController.getInformation
   );
-
+paiementRouter
+  .route("/termine")
+  .get(
+    authController.protect,
+    authController.restricTo("admin"),
+    paiementController.terminnation
+  );
+paiementRouter
+  .route("/confirmation")
+  .get(
+    authController.protect,
+    authController.restricTo("admin"),
+    paiementController.Confirmation
+  );
 paiementRouter
   .route("/:id")
   .delete(
@@ -51,8 +64,9 @@ paiementRouter
   .post(
     authController.protect,
     authController.restricTo("professeur"),
-    paiementController.Validation
+    paiementController.Confirmation
   );
+
 paiementRouter
   .route("/:id/professeur")
   .post(authController.protect, paiementController.getPaiementsByProfesseurId);

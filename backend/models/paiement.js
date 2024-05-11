@@ -2,7 +2,6 @@ const mongoose = require("mongoose");
 const Professeur = require("../models/professeur");
 const Cours = require("../models/cours");
 const sendEmail = require("../utils/email");
-const e = require("cors");
 const paiementSchema = mongoose.Schema(
   {
     date: {

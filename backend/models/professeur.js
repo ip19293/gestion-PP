@@ -1,6 +1,4 @@
 const mongoose = require("mongoose");
-const Element = require("../models/element");
-const User = require("../auth/models/user");
 
 const professeurSchema = mongoose.Schema(
   {
@@ -281,18 +279,58 @@ professeurSchema.methods.getEmplois = async function () {
       },
     },
     {
+      $lookup: {
+        from: "filieres",
+        localField: "filiere",
+        foreignField: "_id",
+        as: "filiereData",
+      },
+    },
+    { $unwind: "$filiereData" },
+    {
+      $lookup: {
+        from: "elements",
+        localField: "element",
+        foreignField: "_id",
+        as: "elementData",
+      },
+    },
+    { $unwind: "$elementData" },
+    {
       $group: {
         _id: "$jour", // Field to group by
         documents: { $push: "$$ROOT" }, // Push each document into an array
       },
     },
-    /*    {
+    {
       $project: {
-        jour: "$_id", // Rename _id to groupName
-        documents: 1, // Include the documents array
-        _id: 0, // Exclude _id field
+        documents: {
+          $map: {
+            input: "$documents",
+            as: "doc",
+            in: {
+              _id: "$$doc._id",
+              type: "$$doc.type",
+              startTime: "$$doc.startTime",
+              finishTime: "$$doc.finishTime",
+              jour: "$$doc.jour",
+              dayNumero: "$$doc.dayNumero",
+              nbh: "$$doc.nbh",
+              //  hour: "$$doc.hour",
+              // minute: "$$doc.minute",
+              filiere: "$$doc.filiereData.name",
+              niveau: "$$doc.filiereData.niveau",
+              description: "$$doc.filiereData.description",
+              element: "$$doc.elementData.name",
+              semestre: "$$doc.elementData.semestre",
+              heuresCM: "$$doc.elementData.heuresCM",
+              heuresTP: "$$doc.elementData.heuresTP",
+              heuresTD: "$$doc.elementData.heuresTD",
+            },
+          },
+        },
       },
-    }, */
+    },
   ]).then((groups) => {
     const result = daysOfWeek.map((day) => {
       const documents =
@@ -305,7 +343,27 @@ professeurSchema.methods.getEmplois = async function () {
 
   return emplois_temp;
 };
+//GET ALL PAIEMENTS ---------------------------------------------------------------------
+professeurSchema.methods.getPaiements = async function () {
+  const Paiement = require("../models/paiement");
+  const paiementsData = await Paiement.find({
+    professeur: this._id,
+    status: { $ne: "terminé" },
+  });
 
+  const paiements = paiementsData.map((paiement) => ({
+    ...paiement.toObject(),
+    professeur: paiement.professeur ? paiement.professeur._id : null,
+    nomComplet: paiement.professeur.user
+      ? paiement.professeur.user.nom + " " + paiement.professeur.user.prenom
+      : null,
+    banque: paiement.professeur ? paiement.professeur.banque : null,
+    accountNumero: paiement.professeur
+      ? paiement.professeur.accountNumero
+      : null,
+  }));
+  return paiements;
+};
 // functions ----------------------------------------------------------------
 const queryFilter = function (professeur, debit, fin) {
   let debitDate = new Date(debit);

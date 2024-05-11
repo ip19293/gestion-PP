@@ -16,6 +16,7 @@ const filterOb = (obj, ...allowedFields) => {
 exports.getUsers = catchAsync(async (req, res, next) => {
   let filter = {};
   if (req.params.id) filter = { cours: req.params.id };
+
   const features = new APIFeatures(User.find().select("+active"), req.query)
     .filter()
     .sort()

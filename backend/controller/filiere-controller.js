@@ -128,45 +128,26 @@ exports.getFiliereDetail = catchAsync(async (req, res, next) => {
     semestre: 1,
   });
   let filiere_info = await filiere.getPeriodePlace();
-  /*  for (elem of list_elements) {
-    let elem_info = await elem.getFiliere_Matiere();
-    let elem_profs = await elem.getProfCM_ProfTP_ProfTD();
-    let matiere_info = await elem_info[1].getCodePrixCNameCCode();
-    let code =
-      matiere_info[3] + elem.semestre + filiere_info[1] + elem_info[1].numero;
-
-    let dt = {
-      _id: elem._id,
-      filiere: elem.filiere,
-      semestre: elem.semestre,
-      matiere: elem.matiere,
-      heuresCM: elem.heuresCM,
-      heuresTP: elem.heuresTP,
-      heuresTD: elem.heuresTD,
-      name_EM: elem_info[1].name,
-      categorie: elem_info[1].categorie,
-      code_EM: code,
-      professeurCM: elem_profs[0],
-      professeurTP: elem_profs[1],
-      professeurTD: elem_profs[2],
-    };
-    elements.push(dt);
-  } */
-  /*   const semestres = await Semestre.find({ filiere: id });
-  for (s of semestres) {
-    if (s.numero != null) {
-      list_semestres.push(s.numero);
-    }
-  }
-  const data = await getFilliereSemestresElements(semestres, filliere); */
+  const emploisData = await Emploi.find({ filiere: id });
+  const emplois = emploisData.map((emploi) => ({
+    ...emploi.toObject(),
+    professeur: emploi.professeur ? emploi.professeur._id : null,
+    nom: emploi.professeur.user ? emploi.professeur.user.nom : null,
+    prenom: emploi.professeur.user ? emploi.professeur.user.prenom : null,
+    filiere_id: emploi.filiere ? emploi.filiere._id : null,
+    filiere: emploi.filiere ? emploi.filiere.name : null,
+    niveau: emploi.filiere ? emploi.filiere.niveau : null,
+    semestre: emploi.element ? emploi.element.semestre : null,
+    name: emploi.element ? emploi.element.name : null,
+    element: emploi.element ? emploi.element._id : null,
+  }));
   res.status(200).json({
     status: "succès",
     _id: filiere._id,
     filiere: filiere.name,
     description: filiere.description,
     niveau: filiere.niveau,
-    //semestres: list_semestres,
-    // elements: data,
+    emplois,
     elements: elements,
   });
 });

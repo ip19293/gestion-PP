@@ -60,12 +60,21 @@ router
   .route("/resultats-detail/:id")
   .post(
     authController.protect,
-    authController.restricTo("admin"),
+    authController.restricTo("admin", "professeur"),
     professeurController.paiementDetailResultats
   );
 router
   .route("/:id/elements")
   .post(authController.protect, professeurController.getElements);
+router
+  .route("/:id/emplois")
+  .get(authController.protect, professeurController.getEmplois);
+router
+  .route("/:id/paiements")
+  .get(authController.protect, professeurController.getPaiements);
+router
+  .route("/:id/cours")
+  .get(authController.protect, professeurController.getCoursByProfesseurID);
 
 router
   .route("/:id")

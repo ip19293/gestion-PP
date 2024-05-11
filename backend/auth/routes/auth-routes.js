@@ -8,12 +8,7 @@ const router = express.Router();
 router.post("/signup", authController.singup);
 router.post("/login", authController.login);
 router.post("/verification", authController.verification);
-router.get("logout", authController.protect, async (req, res) => {
-  try {
-  } catch (error) {
-    res.status().send(error);
-  }
-});
+
 router.post("/forgotPassword", authController.forgotPassword);
 router.patch(
   "/updateMyPassword",

@@ -1,3 +1,4 @@
+const mongoose = require("mongoose");
 const APIFeatures = require("../utils/apiFeatures");
 const Paiement = require("../models/paiement");
 const Cours = require("../models/cours");
@@ -27,9 +28,49 @@ exports.getPaiements = catchAsync(async (req, res, next) => {
       ? paiement.professeur.accountNumero
       : null,
   }));
+  let paiements_vide = await Paiement.find({ confirmation: "vide" });
   res.status(200).json({
     status: "success",
+    nb_vide: paiements_vide.length,
     paiements,
+  });
+});
+/*  1)============================= terminner ======================================================*/
+exports.terminnation = catchAsync(async (req, res, next) => {
+  //change cours status
+
+  const features = new APIFeatures(Paiement.find(), req.query);
+  const paiementsData = await features.query;
+  const liste = paiementsData.map((paiement) => ({
+    ...paiement.toObject(),
+
+    professeur: paiement.professeur ? paiement.professeur._id : null,
+    nomComplet: paiement.professeur.user
+      ? paiement.professeur.user.nom + " " + paiement.professeur.user.prenom
+      : null,
+    banque: paiement.professeur ? paiement.professeur.banque : null,
+    accountNumero: paiement.professeur
+      ? paiement.professeur.accountNumero
+      : null,
+
+    _id: undefined,
+    professeur: undefined,
+    nbh: undefined,
+    nbc: undefined,
+    th: undefined,
+    __v: undefined,
+    fromDate: undefined,
+    toDate: undefined,
+    date: undefined,
+    createdAt: undefined,
+    updatedAt: undefined,
+    status: undefined,
+    confirmation: undefined,
+  }));
+
+  res.status(200).json({
+    status: "success",
+    liste,
   });
 });
 
@@ -82,7 +123,8 @@ exports.addPaiement = catchAsync(async (req, res, next) => {
 });
 // 4) Get payement informatiom ---------------------------------------------------------------------------------------
 exports.getInformation = catchAsync(async (req, res, next) => {
-  const matchQuery =
+  const data = req.body.ids;
+  let matchQuery =
     req.body.debit !== undefined && req.body.fin !== undefined
       ? {
           date: {
@@ -96,6 +138,10 @@ exports.getInformation = catchAsync(async (req, res, next) => {
           isSigned: "effectué",
           isPaid: "en attente",
         };
+  if (Array.isArray(data)) {
+    const objectIds = data.map((id) => new mongoose.Types.ObjectId(id));
+    matchQuery.professeur = { $in: objectIds };
+  }
 
   const result = await Cours.aggregate([
     {
@@ -142,7 +188,6 @@ exports.getInformation = catchAsync(async (req, res, next) => {
             ],
           },
         },
-
         nbc: { $sum: 1 },
         nbh: { $sum: "$nbh" },
         somme: { $sum: "$somme" },
@@ -315,32 +360,48 @@ exports.getPaiementsByProfesseurId = catchAsync(async (req, res, next) => {
 });
 
 // 6) comfirmation par professeur dun paiement
-exports.Validation = catchAsync(async (req, res, next) => {
+exports.Confirmation = catchAsync(async (req, res, next) => {
   const id = req.params.id;
-  let paiement = await Paiement.findById(id);
-  if (!paiement) {
-    return next(new AppError("Aucun object trouvé avec cet ID !", 404));
-  }
-  let auery =
+  const filter = req.params.id != undefined ? req.params.id : {};
+  let query =
     req.body.refuse !== undefined
       ? { confirmation: "refusé" }
       : {
           confirmation: "accepté",
           status: "validé",
         };
+  if (req.params.id != undefined) {
+    let paiement = await Paiement.findById(id);
+    if (!paiement) {
+      return next(new AppError("Aucun object trouvé avec cet ID !", 404));
+    }
+    paiement = await Paiement.findByIdAndUpdate(id, query, {
+      new: true,
+      runValidators: true,
+    });
+  } else {
+    await Paiement.updateMany({ confirmation: "vide" }, query, {
+      new: true,
+      runValidators: true,
+    });
+  }
+
   let message =
     req.body.refuse !== undefined
-      ? "Le paiement est refusé avec succés ."
-      : "Le paiement est validé avec succés .";
-  paiement = await Paiement.findByIdAndUpdate(id, auery, {
-    new: true,
-    runValidators: true,
-  });
+      ? `${
+          req.params.id != undefined
+            ? "Le paiement est refusé avec succés ."
+            : "Les paiements sont refusé avec succés ."
+        }  `
+      : `${
+          req.params.id != undefined
+            ? "Le paiement est validé avec succés ."
+            : "Les paiements sont validé avec succés ."
+        }  `;
 
   res.status(200).json({
     status: "succès",
     message: message,
-    paiement,
   });
 });
 

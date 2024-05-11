@@ -5,11 +5,7 @@ const createCoursFromEmploiController = require("../controller/create-cours-from
 const authController = require("../auth/controller/auth-controller");
 const CoursRouter = express.Router();
 CoursRouter.route("/")
-  .get(
-    authController.protect,
-    authController.restricTo("admin", "responsable"),
-    courController.getCours
-  )
+  .get(authController.protect, courController.getCours)
   .post(authController.protect, courController.addCours);
 CoursRouter.route("/notpaid").get(
   authController.protect,
