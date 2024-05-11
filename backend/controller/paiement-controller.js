@@ -363,14 +363,7 @@ exports.getPaiementsByProfesseurId = catchAsync(async (req, res, next) => {
 exports.Confirmation = catchAsync(async (req, res, next) => {
   const id = req.params.id;
   const filter = req.params.id != undefined ? req.params.id : {};
-<<<<<<< HEAD
-  if (
-    req.body.refuse !== undefined &&
-    (req.body.message == undefined || req.body.message === "")
-  ) {
-=======
-  if (req.body.refuse !== undefined && req.body.message == undefined) {
->>>>>>> 5ac67840186c22eb289649660c0437dfafb047a8
+  if (req.body.refuse !== undefined &&( req.body.message == undefined || req.body.message ==="") {
     return next(new AppError("Il fout un texte justifiant le refus !", 404));
   }
   let query =
