@@ -51,7 +51,7 @@ paiementRouter
   .post(
     authController.protect,
     authController.restricTo("professeur"),
-    paiementController.Validation
+    paiementController.Confirmation
   );
 paiementRouter
   .route("/:id/professeur")

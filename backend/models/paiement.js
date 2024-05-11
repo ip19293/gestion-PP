@@ -2,7 +2,6 @@ const mongoose = require("mongoose");
 const Professeur = require("../models/professeur");
 const Cours = require("../models/cours");
 const sendEmail = require("../utils/email");
-const e = require("cors");
 const paiementSchema = mongoose.Schema(
   {
     date: {
@@ -57,6 +56,14 @@ const paiementSchema = mongoose.Schema(
       type: String,
       default: "vide",
       enum: ["vide", "accepté", "refusé"],
+    },
+    message: {
+      type: String,
+      default: "ok",
+      maxLength: [
+        40,
+        "Le message justifiant le refuse doit avoir une longueur moin de 40 chiffres ",
+      ],
     },
   },
   { timestamps: true },
