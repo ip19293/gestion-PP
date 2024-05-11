@@ -363,9 +363,12 @@ exports.getPaiementsByProfesseurId = catchAsync(async (req, res, next) => {
 exports.Confirmation = catchAsync(async (req, res, next) => {
   const id = req.params.id;
   const filter = req.params.id != undefined ? req.params.id : {};
+  if (req.body.refuse !== undefined && req.body.message == undefined) {
+    return next(new AppError("Il fout un texte justifiant le refus !", 404));
+  }
   let query =
     req.body.refuse !== undefined
-      ? { confirmation: "refusé" }
+      ? { confirmation: "refusé", message: req.body.message }
       : {
           confirmation: "accepté",
           status: "validé",

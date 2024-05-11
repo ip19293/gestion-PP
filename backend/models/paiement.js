@@ -57,6 +57,14 @@ const paiementSchema = mongoose.Schema(
       default: "vide",
       enum: ["vide", "accepté", "refusé"],
     },
+    message: {
+      type: String,
+      default: "ok",
+      maxLength: [
+        40,
+        "Le message justifiant le refuse doit avoir une longueur moin de 40 chiffres ",
+      ],
+    },
   },
   { timestamps: true },
   {
