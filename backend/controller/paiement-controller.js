@@ -362,18 +362,22 @@ exports.getPaiementsByProfesseurId = catchAsync(async (req, res, next) => {
 // 6) comfirmation par professeur dun paiement
 exports.Confirmation = catchAsync(async (req, res, next) => {
   const id = req.params.id;
-  const filter = req.params.id != undefined ? req.params.id : {};
-  if (req.body.refuse !== undefined &&( req.body.message == undefined || req.body.message ==="") {
+  if (
+    req.body.refuse !== undefined &&
+    (req.body.message == undefined || req.body.message === "")
+  ) {
     return next(new AppError("Il fout un texte justifiant le refus !", 404));
   }
+
   let query =
     req.body.refuse !== undefined
       ? { confirmation: "refusé", message: req.body.message }
       : {
           confirmation: "accepté",
           status: "validé",
+          message: "ok",
         };
-  if (req.params.id != undefined) {
+  if (id != undefined) {
     let paiement = await Paiement.findById(id);
     if (!paiement) {
       return next(new AppError("Aucun object trouvé avec cet ID !", 404));
