@@ -89,7 +89,7 @@ exports.totalResultats = catchAsync(async (req, res, next) => {
 //------------------------------------------------get all professeurs ------------------------------------------------ */
 exports.getProfesseurs = catchAsync(async (req, res, next) => {
   let filter = {};
-  if (req.params.id) filter = { cours: req.params.id };
+  if (req.params.id) filter = { _id: req.params.id };
 
   const features = new APIFeatures(Professeur.find(), req.query)
     .filter()
@@ -213,6 +213,81 @@ exports.getElements = catchAsync(async (req, res, next) => {
     elements,
   });
 });
+///GET PROFESSEUR Emplois --------------------------------------------------------------------------------------
+exports.getEmplois = catchAsync(async (req, res, next) => {
+  const id = req.params.id;
+  console.log(id);
+  const Oldprofesseur = await Professeur.findById(id);
+  if (!Oldprofesseur) {
+    return next(
+      new AppError("Aucun enseignant trouvé avec cet identifiant !", 404)
+    );
+  }
+  let emploisData = await Oldprofesseur.getEmplois();
+  const result = {};
+
+  emploisData.forEach((dayData) => {
+    const day = Object.keys(dayData)[0];
+    result[day] = dayData[day];
+  });
+  res.status(200).json({
+    status: "succés",
+    professeur: Oldprofesseur,
+    emplois: result,
+  });
+});
+//GET PAIEMENTS BY PROFESSEUR ID ------------------------------------------------------------------------------
+exports.getPaiements = catchAsync(async (req, res, next) => {
+  const id = req.params.id;
+  console.log(id);
+  const Oldprofesseur = await Professeur.findById(id);
+  if (!Oldprofesseur) {
+    return next(
+      new AppError("Aucun enseignant trouvé avec cet identifiant !", 404)
+    );
+  }
+  let paiements = await Oldprofesseur.getPaiements();
+
+  res.status(200).json({
+    status: "succés",
+    professeur: Oldprofesseur,
+    paiements,
+  });
+});
+exports.getCoursByProfesseurID = catchAsync(async (req, res, next) => {
+  const id = req.params.id;
+  const professeur = await Professeur.findById(id);
+  if (!professeur) {
+    return next(
+      new AppError("Aucun enseignant trouvé avec cet identifiant !", 404)
+    );
+  }
+  const features = new APIFeatures(Cours.find({ professeur: id }), req.query)
+    .filter()
+    .sort()
+    .limitFields()
+    .pagination();
+  const coursData = await features.query;
+  const cours = coursData.map((cours) => ({
+    ...cours.toObject(),
+    professeur: cours.professeur ? cours.professeur._id : null,
+    nom: cours.professeur.user ? cours.professeur.user.nom : null,
+    prenom: cours.professeur.user ? cours.professeur.user.prenom : null,
+    //-----------------------------------------------------------------
+    element: cours.element ? cours.element._id : null,
+    matiere: cours.element ? cours.element.name : null,
+    filiere: cours.element ? cours.element.code.split("-")[0] : null,
+    code: cours.element ? cours.element.code.split("-")[1] : null,
+    //professeur: undefined,
+  }));
+
+  res.status(200).json({
+    status: "succès",
+    professeur,
+    cours,
+  });
+});
+
 ///GET professeur paiement detail -----------------------------------------------------------------------------------
 exports.paiementDetailResultats = catchAsync(async (req, res, next) => {
   const id = req.params.id;
@@ -355,6 +430,7 @@ exports.removeElementFromProfesseur = catchAsync(async (req, res, next) => {
 
 //UPLOAD PROFESSEURS ------------------------------------------------------------------------------------------
 exports.uploadProfesseurs = catchAsync(async (req, res, next) => {
+  const password = req.body.password;
   const XLSX = require("xlsx");
   const fileName = req.file.filename;
   let message = "Le fichier est téléchargé avec succés";
@@ -362,7 +438,7 @@ exports.uploadProfesseurs = catchAsync(async (req, res, next) => {
   const workbook = XLSX.readFile(url, { cellDates: true });
   const sheetName = workbook.SheetNames[0];
   const uniqueSuffixAccontNumero = Date.now();
-  console.log(sheetName);
+  //console.log(sheetName);
   const emploiName = workbook.Sheets[sheetName];
   const jsonData = XLSX.utils.sheet_to_json(emploiName);
 
@@ -371,61 +447,70 @@ exports.uploadProfesseurs = catchAsync(async (req, res, next) => {
     header: 1,
   });
   const finalJsonData = columnData.filter((row) => row.length > 0);
-
+  if (finalJsonData.length < 10 || finalJsonData.length > 40) {
+    return next(new AppError("Le fichier importer n'est pas valide !", 404));
+  }
   for (const [index, x] of finalJsonData.entries()) {
     if (x[0] == null || x[0] === "code" || x[0] === "CodeEM") {
       console.log(x[1]);
     } else {
       for (let z = 4; z < 7; z++) {
-        let value = x[z].replace("/ ", "/");
-        let professeursCM = value.split("/");
-        const element = await Element.findOne({ name: x[1] });
-        for (const [i, prof] of professeursCM.entries()) {
-          let professeur = prof.split(" ");
-          let nom = professeur[0] != undefined ? professeur[0] : "";
-          let prenom = professeur[1] != undefined ? professeur[1] : "";
-          let famille = professeur[2] != undefined ? professeur[2] : "";
-          let email =
-            famille != ""
-              ? nom + `.${prenom}` + `.${famille}` + "@supnum.mr"
-              : prenom != ""
-              ? nom + `.${prenom}` + "@supnum.mr"
-              : nom + `.${nom}` + "@supnum.mr";
-          email = email.toLowerCase();
-          const Olduser = await User.findOne({ email: email });
-          if (Olduser) {
-            const Oldprofesseur = await Professeur.findOne({
-              user: Olduser._id,
-            });
-            if (!Oldprofesseur) {
-              const professeur = await Professeur.create({
+        let value = x[z] != undefined ? x[z].replace("/ ", "/") : undefined;
+        let professeursCM = value != undefined ? value.split("/") : undefined;
+        if (value != undefined && professeursCM != undefined) {
+          const element = await Element.findOne({ name: x[1] });
+          for (const [i, prof] of professeursCM.entries()) {
+            let professeur = prof.split(" ");
+            let nom = professeur[0] != undefined ? professeur[0] : "";
+            let prenom = professeur[1] != undefined ? professeur[1] : "";
+            let famille = professeur[2] != undefined ? professeur[2] : "";
+            let email =
+              famille != ""
+                ? nom + `.${prenom}` + `.${famille}` + "@supnum.mr"
+                : prenom != ""
+                ? nom + `.${prenom}` + "@supnum.mr"
+                : nom + `.${nom}` + "@supnum.mr";
+            email = email.toLowerCase();
+            const Olduser = await User.findOne({ email: email });
+            if (Olduser) {
+              const Oldprofesseur = await Professeur.findOne({
                 user: Olduser._id,
-                accountNumero: uniqueSuffixAccontNumero + `-${index}${z}${i}`,
               });
+              if (!Oldprofesseur) {
+                const professeur = await Professeur.create({
+                  user: Olduser._id,
+                  accountNumero: uniqueSuffixAccontNumero + `-${index}${z}${i}`,
+                });
+              }
+            } else {
+              let dt = {
+                nom: nom,
+                prenom:
+                  famille != ""
+                    ? prenom + " " + famille
+                    : prenom != ""
+                    ? prenom
+                    : nom,
+                email: email,
+                password: password == undefined ? "1234@supnum" : password,
+                passwordConfirm:
+                  password == undefined ? "1234@supnum" : password,
+                photo: "http://localhost:5000/uploads/images/user.png",
+                mobile: parseInt(uniqueSuffixAccontNumero + `${index}${z}${i}`),
+              };
+              try {
+                const user = await User.create(dt);
+                await Professeur.create({
+                  user: user._id,
+                  accountNumero: uniqueSuffixAccontNumero + `-${index}${z}${i}`,
+                });
+              } catch (error) {}
             }
-          } else {
-            let dt = {
-              nom: nom,
-              prenom:
-                famille != ""
-                  ? prenom + " " + famille
-                  : prenom != ""
-                  ? prenom
-                  : nom,
-              email: email,
-              password: "1234@supnum",
-              passwordConfirm: "1234@supnum",
-              photo: "http://localhost:5000/uploads/images/user.png",
-              mobile: parseInt(uniqueSuffixAccontNumero + `${index}${z}${i}`),
-            };
-            try {
-              const user = await User.create(dt);
-              await Professeur.create({
-                user: user._id,
-                accountNumero: uniqueSuffixAccontNumero + `-${index}${z}${i}`,
-              });
-            } catch (error) {}
           }
+        } else {
+          return next(
+            new AppError("Le fichier importer n'est pas valide !", 404)
+          );
         }
       }
     }

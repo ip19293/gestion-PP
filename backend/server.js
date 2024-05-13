@@ -74,8 +74,8 @@ app.use((req, res, next) => {
   next();
 });
 
-app.use("/user", UserRouter);
 app.use("/auth", AuthRouter);
+app.use("/user", UserRouter);
 app.use("/professeur", ProfesseurRouter);
 app.use("/categorie", CategorieRouter);
 app.use("/cours", CoursRouter);

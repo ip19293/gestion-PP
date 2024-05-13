@@ -21,11 +21,15 @@ exports.getEmplois = catchAsync(async (req, res, next) => {
   const emplois = emploisData.map((emploi) => ({
     ...emploi.toObject(),
     professeur: emploi.professeur ? emploi.professeur._id : null,
-    nomComplet: emploi.professeur.user
-      ? emploi.professeur.user.nom + " " + emploi.professeur.user.prenom
-      : null,
+    nom: emploi.professeur.user ? emploi.professeur.user.nom : null,
+    prenom: emploi.professeur.user ? emploi.professeur.user.prenom : null,
+    filiere_id: emploi.filiere ? emploi.filiere._id : null,
     filiere: emploi.filiere ? emploi.filiere.name : null,
     niveau: emploi.filiere ? emploi.filiere.niveau : null,
+    semestre: emploi.element ? emploi.element.semestre : null,
+    name: emploi.element ? emploi.element.name : null,
+    code: emploi.element ? emploi.element.code : null,
+    element: emploi.element ? emploi.element._id : null,
   }));
 
   res.status(200).json({
@@ -74,17 +78,6 @@ exports.addEmploi = catchAsync(async (req, res, next) => {
     }
   }
 
-  const emplois_day = await Emploi.find({
-    dayNumero: req.body.dayNumero,
-    filiere: req.body.filiere,
-  });
-
-  const result_filiere = VERIFICATION(req.body, emplois_day, "filiere");
-
-  if (result_filiere[0] == "failed") {
-    console.log(result_filiere[0]);
-    return next(new AppError(`${result_filiere[1]}`, 404));
-  }
   const cours_list = await Emploi.find({
     professeur: req.body.professeur,
     dayNumero: req.body.dayNumero,
@@ -101,7 +94,6 @@ exports.addEmploi = catchAsync(async (req, res, next) => {
     startTime: req.body.startTime,
     element: req.body.element,
     dayNumero: req.body.dayNumero,
-    filiere: req.body.filiere,
     professeur: req.body.professeur,
   });
   emploi = await emploi.save();
@@ -115,8 +107,7 @@ exports.addEmploi = catchAsync(async (req, res, next) => {
 exports.updateEmploi = async (req, res, next) => {
   const id = req.params.id;
   const element = await Element.findById(req.body.element);
-
-  const emploi = await Emploi.findById(id);
+  const emploi = id != undefined ? await Emploi.findById(id) : undefined;
   if (!emploi) {
     return next(
       new AppError("Aucun emploi trouvé avec cet identifiant !", 404)
@@ -128,31 +119,21 @@ exports.updateEmploi = async (req, res, next) => {
     );
   } else {
     let type = element["professeur" + req.body.type];
-    console.log(type);
-    let professeur = await Professeur.findById(type);
-    if (!professeur) {
+    let prof = type.find((el) =>
+      el.equals(new mongoose.Types.ObjectId(req.body.professeur))
+    );
+    if (!prof) {
       return next(
         new AppError(
-          `Il n'y a pas de professeur  ${req.body.type} de cette élément  !`,
+          `Ce professeur  ne fait pas partie des professeurs de ${req.body.type}  pour  l'elément !`,
           404
         )
       );
     }
   }
-  const emplois_day = await Emploi.find({
-    _id: { $ne: id },
-    dayNumero: req.body.dayNumero,
-    group: req.body.group,
-  });
-  const result = VERIFICATION(req.body, emplois_day, "groupe");
-
-  if (result[0] == "failed") {
-    console.log(result[0]);
-    return next(new AppError(`${result[1]}`, 404));
-  }
   const cours_list = await Emploi.find({
     _id: { $ne: id },
-    element: req.body.element,
+    professeur: req.body.professeur,
     dayNumero: req.body.dayNumero,
   });
   const result_prof = VERIFICATION(req.body, cours_list, "enseigant");
@@ -165,6 +146,7 @@ exports.updateEmploi = async (req, res, next) => {
   emploi.startTime = req.body.startTime;
   emploi.element = req.body.element;
   emploi.dayNumero = req.body.dayNumero;
+  emploi.professeur = req.body.professeur;
   await emploi.save();
 
   res.status(200).json({

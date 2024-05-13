@@ -45,7 +45,21 @@ exports.addElement = catchAsync(async (req, res, next) => {
   if (OldElement) {
     return next(new AppError("L'element existe déja !", 404));
   }
-  const element = await Element.create(data);
+  const element = await Element.create({
+    name: req.body.name,
+    semestre: req.body.semestre,
+    filiere: req.body.filiere,
+    categorie: req.body.categorie,
+    heuresCM: req.body.heuresCM,
+    heuresTP: req.body.heuresTP,
+    heuresTD: req.body.heuresTD,
+    professeurCM:
+      req.body.professeurCM != [] ? req.body.professeurCM : undefined,
+    professeurTP:
+      req.body.professeurTP != [] ? req.body.professeurTP : undefined,
+    professeurTD:
+      req.body.professeurTD != [] ? req.body.professeurTD : undefined,
+  });
   res.status(200).json({
     status: "succés",
     message: "La matière est ajouté avec succés .",
@@ -218,31 +232,37 @@ exports.uploadElements = catchAsync(async (req, res, next) => {
         let professeurs_Total = [[], [], []];
         for (let z = 4; z < 7; z++) {
           //GET PROFESSEURS CM TD TP LISTE
-          let value = x[z].replace("/ ", "/");
-          let professeurs = value.split("/");
-          for (prof of professeurs) {
-            let professeur = prof.split(" ");
-            let nom = professeur[0] != undefined ? professeur[0] : "";
-            let prenom = professeur[1] != undefined ? professeur[1] : "";
-            let famille = professeur[2] != undefined ? professeur[2] : "";
-            let email =
-              famille != ""
-                ? nom + `.${prenom}` + `.${famille}` + "@supnum.mr"
-                : prenom != ""
-                ? nom + `.${prenom}` + "@supnum.mr"
-                : nom + `.${nom}` + "@supnum.mr";
-            email = email.toLowerCase();
-            const OldUser = await User.findOne({ email: email });
-            if (OldUser && OldUser.role === "professeur") {
-              let Oldprofesseur = await Professeur.findOne({
-                user: OldUser._id,
-              });
-              if (Oldprofesseur) {
-                professeurs_Total[z - 4].push(Oldprofesseur._id);
-              } else {
-                console.log("NOT existing professeurs ....................");
+          let value = x[z] != undefined ? x[z].replace("/ ", "/") : undefined;
+          let professeurs = value != undefined ? value.split("/") : undefined;
+          if (value != undefined && professeurs != undefined) {
+            for (prof of professeurs) {
+              let professeur = prof.split(" ");
+              let nom = professeur[0] != undefined ? professeur[0] : "";
+              let prenom = professeur[1] != undefined ? professeur[1] : "";
+              let famille = professeur[2] != undefined ? professeur[2] : "";
+              let email =
+                famille != ""
+                  ? nom + `.${prenom}` + `.${famille}` + "@supnum.mr"
+                  : prenom != ""
+                  ? nom + `.${prenom}` + "@supnum.mr"
+                  : nom + `.${nom}` + "@supnum.mr";
+              email = email.toLowerCase();
+              const OldUser = await User.findOne({ email: email });
+              if (OldUser && OldUser.role === "professeur") {
+                let Oldprofesseur = await Professeur.findOne({
+                  user: OldUser._id,
+                });
+                if (Oldprofesseur) {
+                  professeurs_Total[z - 4].push(Oldprofesseur._id);
+                } else {
+                  console.log("NOT existing professeurs ....................");
+                }
               }
             }
+          } else {
+            return next(
+              new AppError("Le fichier importer n'est pas valide !", 404)
+            );
           }
         }
         console.log(numero);
@@ -386,4 +406,16 @@ exports.uploadElements = catchAsync(async (req, res, next) => {
 
     message,
   });
+});
+
+exports.getElementProfesseursByType = catchAsync(async (req, res, next) => {
+  const id = req.params.id;
+  const element = await Element.findById(id);
+  if (!element) {
+    return next(
+      new AppError("Aucune element trouvée avec cet identifiant !", 404)
+    );
+  }
+
+  let type = req.body.type;
 });

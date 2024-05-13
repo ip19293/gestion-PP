@@ -13,6 +13,7 @@ router.param("id", (req, res, next, val) => {
   console.log(`id de user est ${val}`);
   next();
 });
+
 router
   .route("/:id")
   .get(filiereController.getFiliereDetail)
@@ -33,5 +34,11 @@ router
     authController.restricTo("admin", "responsable"),
     filiereController.getFiliereEmplois
   );
-
+router
+  .route("/all/semestre-change")
+  .get(
+    authController.protect,
+    authController.restricTo("admin", "responsable"),
+    filiereController.getStartNewSemestre
+  );
 module.exports = router;

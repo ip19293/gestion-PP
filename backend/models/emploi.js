@@ -118,13 +118,14 @@ emploiSchema.pre(/^find/, function (next) {
   this.populate([
     {
       path: "professeur",
-      select: "user",
+      /*   select: "user",
       populate: {
         path: "user",
         select: "nom prenom",
-      },
+      }, */
     },
     { path: "filiere", select: "name niveau" },
+    { path: "element" },
   ]);
 
   next();
@@ -143,37 +144,7 @@ emploiSchema.methods.getDayName = async function () {
 
   return daysOfWeek[this.dayNumero];
 };
-emploiSchema.methods.getProfesseurMatiere = async function () {
-  const element = await Element.findById(this.element);
-  console.log(element);
-  let type = element["professeur" + this.type];
-  let professeur = await Professeur.findById(type);
-  let prof_info = await professeur.getInformation();
-  let res = [prof_info[0], prof_info[1], prof_info[2]];
 
-  return res;
-};
-
-emploiSchema.methods.getGName_SNum_SId_FId_FName_FNiveau_NiveauAnnee =
-  async function () {
-    const Group = require("./group");
-
-    const group = await Group.findById(this.group);
-    let group_info = await group.getSNumero_FId_FName_FNiveau_NiveauAnnee();
-    let info = [];
-    if (group) {
-      info = [
-        group.name,
-        group_info[0],
-        group.semestre,
-        group_info[1],
-        group_info[2],
-        group_info[3],
-        group_info[4],
-      ];
-    }
-    return info;
-  };
 /* -------------------------------------------------------------------Get Emplois Professeurs ------------------ */
 emploiSchema.methods.getEmploiProfesseurs = async function () {
   const element = await Element.findById(this.element);

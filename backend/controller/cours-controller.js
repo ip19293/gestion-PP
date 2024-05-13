@@ -64,7 +64,14 @@ exports.addCours = catchAsync(async (req, res, next) => {
       new AppError("Aucune element trouvée avec cet identifiant !", 404)
     );
   }
-
+  if (element["heures" + req.body.type] === 0) {
+    return next(
+      new AppError(
+        ` Le nombre des heures de ${req.body.type} de cet element sont terminer !`,
+        404
+      )
+    );
+  }
   let professeurs = element["professeur" + req.body.type];
   let elements = await Element.find({
     _id: req.body.element,
@@ -204,21 +211,40 @@ exports.signeCours = async (req, res, next) => {
         ? "La signature mise en attente par l'admin avec succés."
         : "La signature a été annulé seul d'admin peut mise en attente ";
   } else if (cours_sign.isSigned === "en attente") {
+    let type = "heures" + cours_sign.type;
+    let element = await Element.findById(cours_sign.element);
+    if (element) {
+      await Element.findByIdAndUpdate(cours_sign.element, {
+        [type]:
+          element[type] - cours_sign.nbh >= 0
+            ? element[type] - cours_sign.nbh
+            : 0,
+      });
+    }
     query = {
       isSigned: "effectué",
       signedBy: req.user.role,
     };
   } else {
-    query =
-      req.user.role === "admin"
-        ? {
-            isSigned: "annulé",
-          }
-        : {};
-    message =
-      req.user.role === "admin"
-        ? "La signature a été annulé  avec succés."
-        : "Seul l'admin qui peut annuler la signature !";
+    if (req.user.role === "admin") {
+      let type = "heures" + cours_sign.type;
+      let element = await Element.findById(cours_sign.element);
+      if (element) {
+        await Element.findByIdAndUpdate(cours_sign.element, {
+          [type]: element[type] + cours_sign.nbh,
+        });
+      }
+      query =
+        req.user.role === "admin"
+          ? {
+              isSigned: "annulé",
+            }
+          : {};
+      message =
+        req.user.role === "admin"
+          ? "La signature a été annulé  avec succés."
+          : "Seul l'admin qui peut annuler la signature !";
+    }
   }
   const cours = await Cours.findOneAndUpdate({ _id: id }, query, {
     new: true,
@@ -231,6 +257,7 @@ exports.signeCours = async (req, res, next) => {
     cours,
   });
 };
+
 /* -------------------------------------------------------------------- signe all cours not signe------------------ */
 exports.signeAllCours = async (req, res, next) => {
   const id = req.params.id;

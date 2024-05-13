@@ -29,16 +29,12 @@ const elementSchema = mongoose.Schema(
           let periode = 2 * filiere_info[0];
           return el <= periode;
         },
-        message: function () {
-          let periode = this.periode;
-          let niveau = this.filiere.niveau;
-          return `Seulement  ${periode} semestres dans ${niveau} !`;
-        },
+        message: `Le semestre ${this.semestre} n'existe pas !`,
       },
     },
-    heuresCM: { type: Number, default: 0 },
-    heuresTP: { type: Number, default: 0 },
-    heuresTD: { type: Number, default: 0 },
+    heuresCM: { type: Number, default: 32 },
+    heuresTP: { type: Number, default: 12 },
+    heuresTD: { type: Number, default: 22 },
 
     categorie: {
       type: mongoose.Schema.ObjectId,

@@ -13,8 +13,18 @@ exports.getFilieres = catchAsync(async (req, res, next) => {
     .sort()
     .limitFields()
     .pagination();
-  const filieres = await features.query;
-
+  const filieresData = await features.query;
+  const filieres = filieresData.map((filiere) => ({
+    ...filiere.toObject(),
+    semestres:
+      filiere.niveau === "master" && !filiere.isPaireSemestre
+        ? [1, 3]
+        : filiere.niveau === "master" && filiere.isPaireSemestre
+        ? [2, 4]
+        : filiere.niveau != "master" && !filiere.isPaireSemestre
+        ? [1, 3, 5]
+        : [2, 4, 6],
+  }));
   res.status(200).json({
     status: "succès",
     filieres,
@@ -128,45 +138,13 @@ exports.getFiliereDetail = catchAsync(async (req, res, next) => {
     semestre: 1,
   });
   let filiere_info = await filiere.getPeriodePlace();
-  /*  for (elem of list_elements) {
-    let elem_info = await elem.getFiliere_Matiere();
-    let elem_profs = await elem.getProfCM_ProfTP_ProfTD();
-    let matiere_info = await elem_info[1].getCodePrixCNameCCode();
-    let code =
-      matiere_info[3] + elem.semestre + filiere_info[1] + elem_info[1].numero;
 
-    let dt = {
-      _id: elem._id,
-      filiere: elem.filiere,
-      semestre: elem.semestre,
-      matiere: elem.matiere,
-      heuresCM: elem.heuresCM,
-      heuresTP: elem.heuresTP,
-      heuresTD: elem.heuresTD,
-      name_EM: elem_info[1].name,
-      categorie: elem_info[1].categorie,
-      code_EM: code,
-      professeurCM: elem_profs[0],
-      professeurTP: elem_profs[1],
-      professeurTD: elem_profs[2],
-    };
-    elements.push(dt);
-  } */
-  /*   const semestres = await Semestre.find({ filiere: id });
-  for (s of semestres) {
-    if (s.numero != null) {
-      list_semestres.push(s.numero);
-    }
-  }
-  const data = await getFilliereSemestresElements(semestres, filliere); */
   res.status(200).json({
     status: "succès",
     _id: filiere._id,
     filiere: filiere.name,
     description: filiere.description,
     niveau: filiere.niveau,
-    //semestres: list_semestres,
-    // elements: data,
     elements: elements,
   });
 });
@@ -178,54 +156,45 @@ exports.getFiliereEmplois = catchAsync(async (req, res, next) => {
       new AppError("La filière avec cet identifiant introuvable !", 404)
     );
   }
-  //let emplois = await filiere.getEmplois();
-  const features = new APIFeatures(Emploi.find(), req.query)
+
+  const emploisDatafeatures = new APIFeatures(
+    Emploi.find({ filiere: id }),
+    req.query
+  )
     .filter()
     .sort()
     .limitFields()
     .pagination();
-  let emplois = await features.query;
+
+  const emploisData = await emploisDatafeatures.query;
+  const emplois = emploisData.map((emploi) => ({
+    ...emploi.toObject(),
+    professeur: emploi.professeur ? emploi.professeur._id : null,
+    nom: emploi.professeur.user ? emploi.professeur.user.nom : null,
+    prenom: emploi.professeur.user ? emploi.professeur.user.prenom : null,
+    filiere_id: emploi.filiere ? emploi.filiere._id : null,
+    filiere: emploi.filiere ? emploi.filiere.name : null,
+    niveau: emploi.filiere ? emploi.filiere.niveau : null,
+    semestre: emploi.element ? emploi.element.semestre : null,
+    name: emploi.element ? emploi.element.name : null,
+    code: emploi.element ? emploi.element.code : null,
+    element: emploi.element ? emploi.element._id : null,
+  }));
   res.status(200).json({
     status: "succès",
-    _id: filiere._id,
-    filiere: filiere.name,
-    description: filiere.description,
-    niveau: filiere.niveau,
-    emplois: emplois,
+    filiere,
+    emplois,
   });
 });
-/* -----------------------------------------------------------FUNCTIONS----------------------- */
-/* 1) GET SEMESTRE WITH ELEMENTS  ----------------------------*/
-/* async function getFilliereSemestresElements(semestres, filliere) {
-  let data = [];
-  let filliere_info = await filliere.getPeriodePlace();
-  if (Array.isArray(semestres)) {
-    for (const s of semestres) {
-      if (Array.isArray(s.elements)) {
-        for (const el of s.elements) {
-          try {
-            const matiere = await Matiere.findById(el);
-            let matiere_info = await matiere.getCodePrixCNameCCode();
-            let code =
-              matiere_info[3] +
-              (await s.numero) +
-              filliere_info[1] +
-              matiere.numero;
-            let element = new FilliereDetail(
-              s._id,
-              s.numero,
-              "S" + s.numero,
-              matiere._id,
-              code,
-              matiere.name
-            );
-            data.push(element);
-          } catch (error) {
-            console.log("Error:", error);
-          }
-        }
-      }
-    }
-  }
-  return data;
-} */
+exports.getStartNewSemestre = catchAsync(async (req, res, next) => {
+  const query = await Filiere.findOne({ isPaireSemestre: false });
+  await Filiere.updateMany(
+    {},
+    { $set: { isPaireSemestre: query ? true : false } }
+  );
+
+  res.status(200).json({
+    status: "succès",
+    message: "Le nouveau semestre est debiter .",
+  });
+});
