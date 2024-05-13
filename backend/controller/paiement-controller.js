@@ -361,6 +361,7 @@ exports.getPaiementsByProfesseurId = catchAsync(async (req, res, next) => {
 
 // 6) comfirmation par professeur dun paiement
 exports.Confirmation = catchAsync(async (req, res, next) => {
+  let message = "";
   const id = req.params.id;
   if (
     req.body.refuse !== undefined &&
@@ -386,25 +387,46 @@ exports.Confirmation = catchAsync(async (req, res, next) => {
       new: true,
       runValidators: true,
     });
+    message =
+      req.body.refuse !== undefined
+        ? "Le paiement est refusé avec succés ."
+        : `Le paiement est validé avec succés .`;
   } else {
-    await Paiement.updateMany({ confirmation: "vide" }, query, {
-      new: true,
-      runValidators: true,
+    const currentDate = new Date();
+    currentDate.setDate(currentDate.getDate() - 7);
+    const paiements_expirer = await Paiement.find({
+      date: { $lte: currentDate },
     });
-  }
 
-  let message =
-    req.body.refuse !== undefined
-      ? `${
-          req.params.id != undefined
-            ? "Le paiement est refusé avec succés ."
-            : "Les paiements sont refusé avec succés ."
-        }  `
-      : `${
-          req.params.id != undefined
-            ? "Le paiement est validé avec succés ."
-            : "Les paiements sont validé avec succés ."
-        }  `;
+    await Paiement.updateMany(
+      { confirmation: "vide", date: { $lte: currentDate } },
+      query,
+      {
+        new: true,
+        runValidators: true,
+      }
+    );
+    const paiements = await Paiement.find({ date: { $gt: currentDate } });
+    if (paiements_expirer.length == 0) {
+      return next(
+        new AppError(
+          `Les paiements ne peuvent pas etre valide pas l'admin avant l'expiration du délai !`,
+          404
+        )
+      );
+    }
+    if (paiements.length > 0) {
+      message = `La confirmation de ${paiements_expirer.length} paiements avec succés , le  ${paiements.length} outre n'est peux pas etre confirmer pas l'admin avant l'expiration du délai !`;
+      /*    return next(
+        new AppError(
+          `Il ya  ${paiements.length} paiements n'est peux pas etre valide pas l'admin avant l'expiration du délai !`,
+          404
+        )
+      ); */
+    } else {
+      message = `Les paiements sont validé avec succés .`;
+    }
+  }
 
   res.status(200).json({
     status: "succès",
