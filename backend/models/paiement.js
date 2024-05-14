@@ -123,7 +123,7 @@ paiementSchema.post("save", async function (paiement, next) {
   const message = `Nouvelle facture de  paiement non  validée ? Connectez-vous a votre compte et  validez la facture .\n`;
   try {
     await sendEmail({
-      email: professeur.email,
+      email: professeur.user.email,
       subject: ` Une facture de paiement non validée`,
       message,
     });

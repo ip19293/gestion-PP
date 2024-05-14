@@ -12,25 +12,92 @@ const VERIFICATION = require("./functions/verificatin");
 exports.getEmplois = catchAsync(async (req, res, next) => {
   let filter = {};
   if (req.params.id) filter = { emplois: req.params.id };
-  const features = new APIFeatures(Emploi.find(), req.query)
-    .filter()
-    .sort()
-    .limitFields()
-    .pagination();
-  const emploisData = await features.query;
-  const emplois = emploisData.map((emploi) => ({
-    ...emploi.toObject(),
-    professeur: emploi.professeur ? emploi.professeur._id : null,
-    nom: emploi.professeur.user ? emploi.professeur.user.nom : null,
-    prenom: emploi.professeur.user ? emploi.professeur.user.prenom : null,
-    filiere_id: emploi.filiere ? emploi.filiere._id : null,
-    filiere: emploi.filiere ? emploi.filiere.name : null,
-    niveau: emploi.filiere ? emploi.filiere.niveau : null,
-    semestre: emploi.element ? emploi.element.semestre : null,
-    name: emploi.element ? emploi.element.name : null,
-    code: emploi.element ? emploi.element.code : null,
-    element: emploi.element ? emploi.element._id : null,
-  }));
+
+  const emplois = await Emploi.aggregate([
+    {
+      $match: req.query,
+    },
+    {
+      $addFields: {
+        hour: {
+          $toInt: {
+            $arrayElemAt: [{ $split: ["$startTime", ":"] }, 0],
+          },
+        },
+        minute: {
+          $toInt: {
+            $arrayElemAt: [{ $split: ["$startTime", ":"] }, 1],
+          },
+        },
+      },
+    },
+    {
+      $sort: {
+        dayNumero: -1,
+        hour: 1,
+        minute: 1,
+      },
+    },
+    {
+      $lookup: {
+        from: "filieres",
+        localField: "filiere",
+        foreignField: "_id",
+        as: "filiereData",
+      },
+    },
+    { $unwind: "$filiereData" },
+    {
+      $lookup: {
+        from: "elements",
+        localField: "element",
+        foreignField: "_id",
+        as: "elementData",
+      },
+    },
+    { $unwind: "$elementData" },
+    {
+      $lookup: {
+        from: "professeurs",
+        localField: "professeur",
+        foreignField: "_id",
+        as: "professeurData",
+      },
+    },
+    { $unwind: "$professeurData" },
+    {
+      $lookup: {
+        from: "users",
+        localField: "professeurData.user",
+        foreignField: "_id",
+        as: "userData",
+      },
+    },
+    { $unwind: "$userData" },
+    {
+      $project: {
+        type: 1,
+        startTime: 1,
+        finishTime: 1,
+        jour: 1,
+        dayNumero: 1,
+        nbh: 1,
+        code: "$elementData.code",
+        filiere: "$filiereData._id",
+        element: "$elementData._id",
+        professeur: "$professeurData._id",
+        nom: "$userData.nom",
+        prenom: "$userData.prenom",
+        element_name: "$elementData.name",
+        filiere_name: "$filiereData.name",
+        description: "$filiereData.description",
+        semestre: "$elementData.semestre",
+        heuresCM: "$elementData.heuresCM",
+        heuresTP: "$elementData.heuresTP",
+        heuresTD: "$elementData.heuresTD",
+      },
+    },
+  ]);
 
   res.status(200).json({
     status: "succés",

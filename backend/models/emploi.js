@@ -127,9 +127,11 @@ emploiSchema.pre(/^find/, function (next) {
     { path: "filiere", select: "name niveau" },
     { path: "element" },
   ]);
+  //console.log(this._mongooseOptions);
 
   next();
 });
+
 /* ---------------------------------------------------------------------get day name methods---------------------- */
 emploiSchema.methods.getDayName = async function () {
   let daysOfWeek = [

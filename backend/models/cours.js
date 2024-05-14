@@ -169,7 +169,7 @@ coursSchema.post("save", async function (cours, next) {
   if (professeur_cours.length > 0) {
     try {
       await sendEmail({
-        email: professeur.email,
+        email: professeur.user.email,
         subject: ` ${professeur_cours.length} Cours à signer`,
         message,
       });
@@ -185,12 +185,12 @@ coursSchema.post("save", async function (cours, next) {
 
 // POST FIND ONE AND UPDATE MIDLEWEERE ==========================================================================
 coursSchema.post("findOneAndUpdate", async function (cours, next) {
-  let professeur = await Professeur.findById(cours.professeur);
+  const professeur = await Professeur.findById(cours.professeur);
   if (cours.isSigned === "annulé" && cours.signedBy != "admin") {
     message = `Vous avez signé un cours qui n'a pas été fait ,le superviseur a remis votre signature .\n Veuillez toujours confirmer avant de signer .`;
     try {
       await sendEmail({
-        email: professeur.email,
+        email: professeur.user.email,
         subject: ` Votre signature a été annulé `,
         message,
       });

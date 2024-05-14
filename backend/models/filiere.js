@@ -53,6 +53,7 @@ filiereSchema.methods.getPeriodePlace = function () {
   }
   return [periode, place];
 };
+
 filiereSchema.methods.getEmplois = async function () {
   const Emploi = require("./emploi");
   const daysOfWeek = [
