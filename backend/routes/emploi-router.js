@@ -58,4 +58,11 @@ emploiRouter
     upload.single("file"),
     emploiController.uploadEmplois
   );
+emploiRouter
+  .route("/add")
+  .post(
+    authController.protect,
+    authController.restricTo("admin", "responsable"),
+    emploiController.addManyEmploi
+  );
 module.exports = emploiRouter;

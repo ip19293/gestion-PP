@@ -9,6 +9,7 @@ const mongoose = require("mongoose");
 const catchAsync = require("../utils/catchAsync");
 const AppError = require("../utils/appError");
 const VERIFICATION = require("./functions/verificatin");
+const emploi = require("../models/emploi");
 exports.getEmplois = catchAsync(async (req, res, next) => {
   let filter = {};
   if (req.params.id) filter = { emplois: req.params.id };
@@ -168,6 +169,52 @@ exports.addEmploi = catchAsync(async (req, res, next) => {
     status: "succés",
     message: `L'emploi ajouté avec succés .`,
     emploi,
+  });
+});
+//ADD MANY EMPLOIS ----------------------------------------------------------------------------------------------
+exports.addManyEmploi = catchAsync(async (req, res, next) => {
+  const data = req.body;
+  let emplois = [];
+  if (Array.isArray(data)) {
+    for (let emploi of data) {
+      let element = await Element.findById(emploi.element);
+      if (element) {
+        let professeurs = element["professeur" + emploi.type];
+        let prof = professeurs.find((el) =>
+          el.equals(new mongoose.Types.ObjectId(emploi.professeur))
+        );
+        if (prof) {
+          const cours_list = await Emploi.find({
+            professeur: emploi.professeur,
+            dayNumero: emploi.dayNumero,
+          });
+          const result_prof = VERIFICATION(emploi, cours_list, "enseigant");
+          if (result_prof[0] != "failed") {
+            let new_emploi = new Emploi({
+              type: emploi.type,
+              nbh: emploi.nbh,
+              startTime: emploi.startTime,
+              element: emploi.element,
+              dayNumero: emploi.dayNumero,
+              professeur: emploi.professeur,
+            });
+            new_emploi = await new_emploi.save();
+            if (new_emploi) {
+              emplois.push(new_emploi);
+            }
+          }
+        }
+      }
+    }
+  }
+  let message =
+    emplois.length > 0
+      ? `L'emploi du temps est modifier en ajoutant ${emplois.length} cours . `
+      : `Aucun nouvel horaire n'a été ajouté !`;
+  /* ------------------------------------------------------ */
+  res.status(201).json({
+    status: "succés",
+    message,
   });
 });
 /* ===================================================================UPDATE bY ID======================================== */
