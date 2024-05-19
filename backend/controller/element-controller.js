@@ -212,11 +212,11 @@ exports.uploadElements = catchAsync(async (req, res, next) => {
   });
   const finalJsonData = columnData.filter((row) => row.length > 0);
   const filiere = await Filiere.findById(id);
-  if (!filiere) {
+  /*   if (!filiere) {
     return next(
       new AppError("Aucune filiere trouvée avec cet identifiant !", 404)
     );
-  }
+  } */
   let numero = 0;
   /*   if (
     ["code", "CodeEM", "Code"].includes(finalJsonData[1][0]) &&
@@ -270,136 +270,157 @@ exports.uploadElements = catchAsync(async (req, res, next) => {
         let categorie = await Categorie.findOne({
           code: categorieCode,
         });
-        let OlElement = await Element.findOne({
-          name: x[1].toLowerCase(),
-          filiere: filiere._id,
-          semestre: numero,
-        });
-        if (OlElement) {
-          console.log(
-            "Element existe deja ---------------------------------------------------"
-          );
+        if (filiere) {
+          let semestres = filiere.semestres.split(",");
+          if (
+            parseInt(semestres[0]) == numero ||
+            parseInt(semestres[1]) == numero
+          ) {
+            let OlElement = await Element.findOne({
+              name: x[1].toLowerCase(),
+              filiere: filiere._id,
+              semestre: numero,
+            });
+            if (OlElement) {
+              console.log(
+                "Element existe deja ---------------------------------------------------"
+              );
+            } else {
+              //ADD ELEMENT TO BD
+
+              let dt = {
+                categorie: categorie ? categorie._id : "",
+                semestre: numero,
+                name: x[1],
+                filiere: filiere._id,
+                professeurCM: professeurs_Total[0],
+                professeurTD: professeurs_Total[1],
+                professeurTP: professeurs_Total[2],
+              };
+              // verifier si le categorie existe
+              if (categorie) {
+                try {
+                  OlElement = await Element.create(dt);
+                  //console.log("OK");
+                } catch (error) {
+                  //console.log(error.message);
+                }
+              } else {
+                try {
+                  console.log(
+                    "NOUVELLE CATEGORIE --------------------------------"
+                  );
+                  let newCategorie = await Categorie.create({
+                    name: categorieCode,
+                  });
+                  dt.categorie = newCategorie._id;
+
+                  OlElement = await Element.create(dt);
+                } catch (error) {}
+              }
+            }
+          }
         } else {
-          //ADD ELEMENT TO BD
-          let dt = {
-            categorie: categorie ? categorie._id : "",
-            semestre: numero,
-            name: x[1],
-            filiere: filiere._id,
-            professeurCM: professeurs_Total[0],
-            professeurTD: professeurs_Total[1],
-            professeurTP: professeurs_Total[2],
-          };
-          // verifier si le categorie existe
-          if (categorie) {
-            try {
-              OlElement = await Element.create(dt);
-              //console.log("OK");
-            } catch (error) {
-              //console.log(error.message);
+          let filiere = await Filiere.findOne({ name: categorieCode });
+          let semestres = filiere?.semestres.split(",");
+          if (
+            filiere &&
+            (parseInt(semestres[0]) == numero ||
+              parseInt(semestres[1]) == numero)
+          ) {
+            //add to one filiere
+            let OlElement = await Element.findOne({
+              name: x[1].toLowerCase(),
+              filiere: filiere._id,
+              semestre: numero,
+            });
+            let semestres = filiere.semestres.split(",");
+            if (
+              (!OlElement && parseInt(semestres[0]) == numero) ||
+              parseInt(semestres[1]) == numero
+            ) {
+              let dt = {
+                categorie: categorie ? categorie._id : "",
+                semestre: numero,
+                name: x[1],
+                filiere: filiere._id,
+                professeurCM: professeurs_Total[0],
+                professeurTD: professeurs_Total[1],
+                professeurTP: professeurs_Total[2],
+              };
+              // verifier si le categorie existe
+              if (categorie) {
+                try {
+                  OlElement = await Element.create(dt);
+                  //console.log("OK");
+                } catch (error) {
+                  //console.log(error.message);
+                }
+              } else {
+                try {
+                  console.log(
+                    "NOUVELLE CATEGORIE --------------------------------"
+                  );
+                  let newCategorie = await Categorie.create({
+                    name: categorieCode,
+                  });
+                  dt.categorie = newCategorie._id;
+
+                  OlElement = await Element.create(dt);
+                } catch (error) {}
+              }
             }
           } else {
-            try {
-              console.log(
-                "NOUVELLE CATEGORIE --------------------------------"
-              );
-              let newCategorie = await Categorie.create({
-                name: categorieCode,
+            //add to all filiere
+            const filieres = await Filiere.find();
+            for (let f of filieres) {
+              let OlElement = await Element.findOne({
+                name: x[1].toLowerCase(),
+                filiere: f._id,
+                semestre: numero,
               });
-              dt.categorie = newCategorie._id;
+              let semestres = f.semestres.split(",");
+              if (
+                (!OlElement && parseInt(semestres[0]) == numero) ||
+                parseInt(semestres[1]) == numero
+              ) {
+                let dt = {
+                  categorie: categorie ? categorie._id : "",
+                  semestre: numero,
+                  name: x[1],
+                  filiere: f._id,
+                  professeurCM: professeurs_Total[0],
+                  professeurTD: professeurs_Total[1],
+                  professeurTP: professeurs_Total[2],
+                };
+                // verifier si le categorie existe
+                if (categorie) {
+                  try {
+                    OlElement = await Element.create(dt);
+                    //console.log("OK");
+                  } catch (error) {
+                    //console.log(error.message);
+                  }
+                } else {
+                  try {
+                    console.log(
+                      "NOUVELLE CATEGORIE --------------------------------"
+                    );
+                    let newCategorie = await Categorie.create({
+                      name: categorieCode,
+                    });
+                    dt.categorie = newCategorie._id;
 
-              OlElement = await Element.create(dt);
-            } catch (error) {}
+                    OlElement = await Element.create(dt);
+                  } catch (error) {}
+                }
+              }
+            }
           }
         }
-        // ADD ELEMENT TO  LISTE ELEMENTS OF PROFESSEURS
-        /*    try {
-          await Professeur.updateMany(
-            {
-              $or: [
-                { _id: { $in: professeurs_Total[0] } },
-                { _id: { $in: professeurs_Total[1] } },
-                { _id: { $in: professeurs_Total[2] } },
-              ],
-            },
-            {
-              $addToSet: {
-                elements: OlElement ? OlElement._id : undefined,
-              },
-            }
-          );
-        } catch (error) {
-          console.log(error.message);
-        } */
       }
     }
   }
-  /* 
-      for (let z = 4; z < 7; z++) {
-        let value = x[z].replace("/ ", "/");
-        let professeursCM = value.split("/");
-        const matiere = await Matiere.findOne({ name: x[1] });
-
-        console.log(matiere + "------------------------------------");
-         professeursCM = professeursCM.filter((el) => el !== " ");
-        for (prof of professeursCM) {
-          let professeur = prof.split(" ");
-          let famille = professeur[2] != undefined ? "." + professeur[2] : "";
-          let email =
-            professeur[1] != undefined
-              ? professeur[0] +
-                `.${professeur[1]}` +
-                `${famille}` +
-                "@supnum.mr"
-              : professeur[0] + `.${professeur[0]}` + "@supnum.mr";
-          const OldUser = await User.findOne({ email: email });
-          if (OldUser && OldUser.role === "professeur") {
-            let Oldprofesseur = await Professeur.findOne({ user: OldUser._id });
-            if (Oldprofesseur) {
-              if (matiere) {
-                await Professeur.updateOne(
-                  {
-                    _id: Oldprofesseur._id,
-                  },
-                  {
-                    $addToSet: {
-                      matieres: matiere._id,
-                    },
-                  }
-                );
-              } else {
-                console.log("Matiere not existe --------------------------");
-              }
-              console.log("prof existing ....................");
-            }
-          } else {
-            let dt = {
-              nom: professeur[0],
-              prenom:
-                professeur[1] != undefined
-                  ? professeur[1] + " " + famille
-                  : professeur[0],
-              email: email,
-              password: "1234@supnum",
-              passwordConfirm: "1234@supnum",
-            };
-            try {
-              const user = await User.create(dt);
-              if (user) {
-                const professeur = await Professeur.create({
-                  user: user._id,
-                  matieres: matiere._id,
-                });
-           
-              }
-        
-            } catch (error) {}
-          }
-        }
-      }
-    }
-  } */
-
   res.status(200).json({
     status: "succés",
     finalJsonData,

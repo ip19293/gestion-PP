@@ -26,6 +26,13 @@ elementRouter
   )
   .post(authController.protect, elementController.addElement);
 elementRouter
+  .route("/upload/all")
+  .post(
+    authController.protect,
+    upload.single("file"),
+    elementController.uploadElements
+  );
+elementRouter
   .route("/:id")
   .delete(authController.protect, elementController.deleteElement)
   .get(authController.protect, elementController.getElement)
@@ -49,4 +56,5 @@ elementRouter
     upload.single("file"),
     elementController.uploadElements
   );
+
 module.exports = elementRouter;

@@ -1,11 +1,14 @@
 const mongoose = require("mongoose");
+const AppError = require("../utils/appError");
+
 const filiereSchema = mongoose.Schema({
   name: { type: String, required: true, lowercase: true },
-  niveau: {
+  semestres: {
     type: String,
-    default: "licence",
-    enum: ["licence", "master", "doctorat"],
+    default: "1,2",
+    enum: ["1,2", "3,4", "5,6"],
   },
+
   description: {
     type: String,
     unique: true,
@@ -14,10 +17,29 @@ const filiereSchema = mongoose.Schema({
     type: Boolean,
     default: false,
   },
+  niveau: {
+    type: String,
+    default: "licence",
+    enum: ["licence", "master", "doctorat"],
+  },
+});
+//VALIDATION MIDLWEERE ------------------------------------------------------
+filiereSchema.pre("validate", async function (next) {
+  try {
+    if (this.semestres === "5,6" && this.niveau === "master") {
+      return next(
+        new AppError(
+          "Le niveau master ne contient pas plus de 4 semestres !",
+          404
+        )
+      );
+    }
+  } catch (error) {
+    next(error);
+  }
 });
 //SAVE MIDLWERED ----------------------------------------------------------------------------------
-filiereSchema.pre("save", async function (next) {
-  //gernerate description from name
+filiereSchema.pre("save", function (next) {
   let description = "";
   let name_part = this.name.split(" ");
   if (!name_part[1]) {
@@ -32,8 +54,14 @@ filiereSchema.pre("save", async function (next) {
     });
   }
   try {
+    let anne = parseInt(this.semestres.split(",")[1]) / 2;
     this.description =
-      this.niveau.substr(0, 1).toLocaleUpperCase() + description;
+      this.semestres === "1,2" && this.niveau === "licence"
+        ? "TC"
+        : this.niveau.substr(0, 1).toLocaleUpperCase() + anne + description;
+
+    this.name =
+      this.semestres === "1,2" && this.niveau === "licence" ? "TC" : this.name;
   } catch (error) {
     console.log(error.message);
   }
@@ -42,10 +70,10 @@ filiereSchema.pre("save", async function (next) {
 //GET PERIODE AND PLACE OF FILIERE --------------------------------------------------------------------
 filiereSchema.methods.getPeriodePlace = function () {
   let periode = 0;
-  let niveaus = ["licence", "master", "doctorat"];
-  let place = niveaus.findIndex((niveau) => niveau == this.niveau) + 1;
+  const niveaux = ["licence", "master", "doctorat"];
+  let place = niveaux.findIndex((niveau) => niveau == this.niveau) + 1;
   if (this.niveau != undefined) {
-    if (this.niveau == "master") {
+    if (this.niveau === "master") {
       periode = 2;
     } else {
       periode = 3;

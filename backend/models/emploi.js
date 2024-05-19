@@ -38,7 +38,7 @@ const emploiSchema = mongoose.Schema({
   professeur: {
     type: mongoose.Schema.ObjectId,
     ref: "Professeur",
-    required: [true, "professeur est requis !"],
+    // required: [true, "professeur est requis !"],
   },
   element: {
     type: mongoose.Schema.ObjectId,
@@ -46,6 +46,11 @@ const emploiSchema = mongoose.Schema({
     required: [true, "élément est requis !"],
   },
   jour: { type: String, lowercase: true },
+  groupe: {
+    type: String,
+    lowercase: true,
+    required: [true, "groupe est requis !"],
+  },
 });
 /* ===================================================================== validate midelwere ======================== */
 /* emploiSchema.pre("validate", async function (next) {
@@ -76,7 +81,13 @@ const emploiSchema = mongoose.Schema({
 /* ===================================================================== save  midelwere ======================== */
 emploiSchema.pre("save", async function (next) {
   const element = await Element.findById(this.element);
-  let type = element["professeur" + this.type];
+  const groupes = element["groupe" + this.type];
+  for (let i = 0; i < groupes.length; i++) {
+    if (groupes[i] === this.groupe) {
+      let groupeData = groupes[i].split("-");
+      this.professeur = new mongoose.Types.ObjectId(groupeData[0]);
+    }
+  }
   /*   let professeur = await Professeur.findById(type);
   this.professeur = professeur._id; */
   this.filiere = element.filiere;

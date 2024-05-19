@@ -16,14 +16,6 @@ exports.getFilieres = catchAsync(async (req, res, next) => {
   const filieresData = await features.query;
   const filieres = filieresData.map((filiere) => ({
     ...filiere.toObject(),
-    semestres:
-      filiere.niveau === "master" && !filiere.isPaireSemestre
-        ? [1, 3]
-        : filiere.niveau === "master" && filiere.isPaireSemestre
-        ? [2, 4]
-        : filiere.niveau != "master" && !filiere.isPaireSemestre
-        ? [1, 3, 5]
-        : [2, 4, 6],
   }));
   res.status(200).json({
     status: "succès",
@@ -39,21 +31,23 @@ exports.deleteAllFilieres = catchAsync(async (req, res, next) => {
 });
 /* -----------------------------------------------------------ADD NEW Filiere-------------------------------------------------------------- */
 exports.addFiliere = catchAsync(async (req, res, next) => {
-  const data = req.body;
   const Oldfiliere = await Filiere.findOne({
     name: req.body.name,
+    semestres: req.body.semestres,
     niveau: req.body.niveau,
   });
   if (Oldfiliere) {
-    return res.status(400).json({
-      status: "échec",
-      message: `La filière ${Oldfiliere.niveau} ${Oldfiliere.name} existe déjà !`,
-    });
+    return next(
+      new AppError(
+        `La filière ${Oldfiliere.niveau} ${Oldfiliere.name} existe déjà !`,
+        404
+      )
+    );
   }
   const filiere = await Filiere.create({
     name: req.body.name,
     niveau: req.body.niveau,
-    description: req.body.description,
+    semestres: req.body.semestres,
   });
 
   res.status(200).json({
@@ -67,19 +61,22 @@ exports.updateFiliere = catchAsync(async (req, res, next) => {
   const id = req.params.id;
   const Oldfiliere = await Filiere.findOne({
     name: req.body.name,
+    semestres: req.body.semestres,
     niveau: req.body.niveau,
   });
   if (Oldfiliere && !Oldfiliere._id.equals(id)) {
-    return res.status(400).json({
-      status: "échec",
-      message: `La filière ${Oldfiliere.niveau} ${Oldfiliere.name} existe déjà ...`,
-    });
+    return next(
+      new AppError(
+        `La filière ${Oldfiliere.niveau} ${Oldfiliere.name} existe déjà ...`,
+        404
+      )
+    );
   }
   const filiere = await Filiere.findById(id);
   filiere.name = req.body.name;
   filiere.niveau = req.body.niveau;
-  filiere.description = req.body.description;
   filiere.isPaireSemestre = req.body.isPaireSemestre;
+  filiere.semestres = req.body.semestres;
   await filiere.save();
   if (!filiere) {
     return next(

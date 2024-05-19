@@ -1,8 +1,7 @@
 const mongoose = require("mongoose");
 const Filiere = require("./filiere");
 const Categorie = require("./categorie");
-const e = require("cors");
-const filiere = require("./filiere");
+
 const elementSchema = mongoose.Schema(
   {
     name: {
@@ -35,6 +34,32 @@ const elementSchema = mongoose.Schema(
     heuresCM: { type: Number, default: 32 },
     heuresTP: { type: Number, default: 12 },
     heuresTD: { type: Number, default: 22 },
+    groupeCM: [
+      {
+        type: String,
+        lowercase: true,
+        unique: true,
+        /*   groupe: { type: String },
+        professeur: {
+          type: mongoose.Schema.ObjectId,
+          ref: "Professeur",
+        }, */
+      },
+    ],
+    groupeTP: [
+      {
+        type: String,
+        lowercase: true,
+        unique: true,
+      },
+    ],
+    groupeTD: [
+      {
+        type: String,
+        lowercase: true,
+        unique: true,
+      },
+    ],
 
     categorie: {
       type: mongoose.Schema.ObjectId,
@@ -164,6 +189,46 @@ elementSchema.pre("save", async function (next) {
 
   next();
 });
+elementSchema.pre("save", function (next) {
+  try {
+    const type = ["CM", "TD", "TP"];
+    for (let t = 0; t < type.length; t++) {
+      let data = [];
+      for (let i = 0; i < this["professeur" + [type[t]]].length; i++) {
+        /*    let dt = {
+        groupe: this.professeurCM[i] + "-" + i,
+        professeur: this.professeurCM[i],
+      }; */
+        data.push(this["professeur" + [type[t]]][i] + "-" + i);
+      }
+      const professeurCount = {};
+      let groupe = [];
+      data.forEach((cmItem, index) => {
+        let groupeData = cmItem.split("-");
+        let professeur = groupeData[0];
+        let nb = groupeData[1];
+        if (professeur) {
+          if (!professeurCount[professeur]) {
+            professeurCount[professeur] = 0;
+          }
+          professeurCount[professeur] += 1;
+          let numero = parseInt(nb) + 1;
+          console.log(numero);
+
+          cmItem =
+            `${professeur}-${professeurCount[professeur]}` + `-` + numero;
+          groupe.push(cmItem);
+        }
+      });
+      this["groupe" + [type[t]]] = groupe;
+    }
+
+    next();
+  } catch (error) {
+    next(error);
+  }
+});
+
 const getNonExistingNumber = function (arr) {
   if (arr) {
   }
@@ -178,7 +243,6 @@ const getNonExistingNumber = function (arr) {
 //POST FIND ONE AND DELETE MIDELWEERE ---------------------------------------------------------------
 elementSchema.post("findOneAndDelete", async function (element) {
   console.log(" element remove midleweere work ....................");
-  const Cours = require("./cours");
   const Emploi = require("./emploi");
   //await Cours.deleteMany({ element: element._id });
   await Emploi.deleteMany({ element: element._id });
