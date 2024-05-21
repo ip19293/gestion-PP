@@ -265,69 +265,58 @@ exports.uploadElements = catchAsync(async (req, res, next) => {
             );
           }
         }
-        console.log(numero);
+        // console.log(numero);
+        //categorie verification if not existe added -----------------------------------------
         let categorieCode = x[0].substring(0, 3);
         let categorie = await Categorie.findOne({
           code: categorieCode,
         });
+        if (!categorie) {
+          try {
+            categorie = await Categorie.create({
+              name: categorieCode,
+            });
+          } catch (error) {
+            console.log(error);
+          }
+        }
         if (filiere) {
           let semestres = filiere.semestres.split(",");
+          let OlElement = await Element.findOne({
+            name: x[1].toLowerCase(),
+            filiere: filiere._id,
+            semestre: numero,
+          });
           if (
             parseInt(semestres[0]) == numero ||
             parseInt(semestres[1]) == numero
           ) {
-            let OlElement = await Element.findOne({
-              name: x[1].toLowerCase(),
-              filiere: filiere._id,
-              semestre: numero,
-            });
             if (OlElement) {
               console.log(
                 "Element existe deja ---------------------------------------------------"
               );
             } else {
               //ADD ELEMENT TO BD
-
-              let dt = {
-                categorie: categorie ? categorie._id : "",
-                semestre: numero,
-                name: x[1],
-                filiere: filiere._id,
-                professeurCM: professeurs_Total[0],
-                professeurTD: professeurs_Total[1],
-                professeurTP: professeurs_Total[2],
-              };
-              // verifier si le categorie existe
-              if (categorie) {
-                try {
-                  OlElement = await Element.create(dt);
-                  //console.log("OK");
-                } catch (error) {
-                  //console.log(error.message);
-                }
-              } else {
-                try {
-                  console.log(
-                    "NOUVELLE CATEGORIE --------------------------------"
-                  );
-                  let newCategorie = await Categorie.create({
-                    name: categorieCode,
-                  });
-                  dt.categorie = newCategorie._id;
-
-                  OlElement = await Element.create(dt);
-                } catch (error) {}
+              // console.log("------" + x[1].toLowerCase());
+              try {
+                let dt = {
+                  categorie: categorie._id,
+                  semestre: numero,
+                  name: x[1].toLowerCase(),
+                  filiere: filiere._id,
+                  professeurCM: professeurs_Total[0],
+                  professeurTD: professeurs_Total[1],
+                  professeurTP: professeurs_Total[2],
+                };
+                OlElement = await Element.create(dt);
+              } catch (error) {
+                console.log(error);
               }
             }
           }
         } else {
           let filiere = await Filiere.findOne({ name: categorieCode });
-          let semestres = filiere?.semestres.split(",");
-          if (
-            filiere &&
-            (parseInt(semestres[0]) == numero ||
-              parseInt(semestres[1]) == numero)
-          ) {
+          if (filiere) {
             //add to one filiere
             let OlElement = await Element.findOne({
               name: x[1].toLowerCase(),
@@ -336,38 +325,23 @@ exports.uploadElements = catchAsync(async (req, res, next) => {
             });
             let semestres = filiere.semestres.split(",");
             if (
-              (!OlElement && parseInt(semestres[0]) == numero) ||
-              parseInt(semestres[1]) == numero
+              !OlElement &&
+              (parseInt(semestres[0]) == numero ||
+                parseInt(semestres[1]) == numero)
             ) {
-              let dt = {
-                categorie: categorie ? categorie._id : "",
-                semestre: numero,
-                name: x[1],
-                filiere: filiere._id,
-                professeurCM: professeurs_Total[0],
-                professeurTD: professeurs_Total[1],
-                professeurTP: professeurs_Total[2],
-              };
-              // verifier si le categorie existe
-              if (categorie) {
-                try {
-                  OlElement = await Element.create(dt);
-                  //console.log("OK");
-                } catch (error) {
-                  //console.log(error.message);
-                }
-              } else {
-                try {
-                  console.log(
-                    "NOUVELLE CATEGORIE --------------------------------"
-                  );
-                  let newCategorie = await Categorie.create({
-                    name: categorieCode,
-                  });
-                  dt.categorie = newCategorie._id;
-
-                  OlElement = await Element.create(dt);
-                } catch (error) {}
+              try {
+                let dt = {
+                  categorie: categorie._id,
+                  semestre: numero,
+                  name: x[1].toLowerCase(),
+                  filiere: filiere._id,
+                  professeurCM: professeurs_Total[0],
+                  professeurTD: professeurs_Total[1],
+                  professeurTP: professeurs_Total[2],
+                };
+                OlElement = await Element.create(dt);
+              } catch (error) {
+                console.log(error);
               }
             }
           } else {
@@ -381,38 +355,23 @@ exports.uploadElements = catchAsync(async (req, res, next) => {
               });
               let semestres = f.semestres.split(",");
               if (
-                (!OlElement && parseInt(semestres[0]) == numero) ||
-                parseInt(semestres[1]) == numero
+                !OlElement &&
+                (parseInt(semestres[0]) == numero ||
+                  parseInt(semestres[1]) == numero)
               ) {
-                let dt = {
-                  categorie: categorie ? categorie._id : "",
-                  semestre: numero,
-                  name: x[1],
-                  filiere: f._id,
-                  professeurCM: professeurs_Total[0],
-                  professeurTD: professeurs_Total[1],
-                  professeurTP: professeurs_Total[2],
-                };
-                // verifier si le categorie existe
-                if (categorie) {
-                  try {
-                    OlElement = await Element.create(dt);
-                    //console.log("OK");
-                  } catch (error) {
-                    //console.log(error.message);
-                  }
-                } else {
-                  try {
-                    console.log(
-                      "NOUVELLE CATEGORIE --------------------------------"
-                    );
-                    let newCategorie = await Categorie.create({
-                      name: categorieCode,
-                    });
-                    dt.categorie = newCategorie._id;
-
-                    OlElement = await Element.create(dt);
-                  } catch (error) {}
+                try {
+                  let dt = {
+                    categorie: categorie._id,
+                    semestre: numero,
+                    name: x[1],
+                    filiere: f._id,
+                    professeurCM: professeurs_Total[0],
+                    professeurTD: professeurs_Total[1],
+                    professeurTP: professeurs_Total[2],
+                  };
+                  OlElement = await Element.create(dt);
+                } catch (error) {
+                  console.log(error);
                 }
               }
             }

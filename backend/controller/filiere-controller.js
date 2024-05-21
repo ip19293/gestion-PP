@@ -16,6 +16,9 @@ exports.getFilieres = catchAsync(async (req, res, next) => {
   const filieresData = await features.query;
   const filieres = filieresData.map((filiere) => ({
     ...filiere.toObject(),
+    semestre: filiere.isPaireSemestre
+      ? parseInt(filiere.semestres.split(",")[1])
+      : parseInt(filiere.semestres.split(",")[0]),
   }));
   res.status(200).json({
     status: "succès",

@@ -38,26 +38,18 @@ const elementSchema = mongoose.Schema(
       {
         type: String,
         lowercase: true,
-        unique: true,
-        /*   groupe: { type: String },
-        professeur: {
-          type: mongoose.Schema.ObjectId,
-          ref: "Professeur",
-        }, */
       },
     ],
     groupeTP: [
       {
         type: String,
         lowercase: true,
-        unique: true,
       },
     ],
     groupeTD: [
       {
         type: String,
         lowercase: true,
-        unique: true,
       },
     ],
 
@@ -213,7 +205,7 @@ elementSchema.pre("save", function (next) {
           }
           professeurCount[professeur] += 1;
           let numero = parseInt(nb) + 1;
-          console.log(numero);
+          //  console.log(numero);
 
           cmItem =
             `${professeur}-${professeurCount[professeur]}` + `-` + numero;

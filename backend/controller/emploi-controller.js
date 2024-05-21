@@ -83,6 +83,7 @@ exports.getEmplois = catchAsync(async (req, res, next) => {
         jour: 1,
         dayNumero: 1,
         nbh: 1,
+        groupe: 1,
         code: "$elementData.code",
         filiere: "$filiereData._id",
         element: "$elementData._id",
@@ -93,6 +94,7 @@ exports.getEmplois = catchAsync(async (req, res, next) => {
         filiere_name: `${
           "$elementData.semestre" > 2 ? filiereData.name : "TC"
         }`,
+
         description: "$filiereData.description",
         semestre: "$elementData.semestre",
         heuresCM: "$elementData.heuresCM",
