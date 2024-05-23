@@ -3,6 +3,7 @@ const User = require("../models/user");
 const catchAsync = require("../../utils/catchAsync");
 const AppError = require("../../utils/appError");
 const Professeur = require("../../models/professeur");
+const professeur = require("../../models/professeur");
 
 const filterOb = (obj, ...allowedFields) => {
   const newObj = {};
@@ -22,8 +23,29 @@ exports.getUsers = catchAsync(async (req, res, next) => {
     .sort()
     .limitFields()
     .pagination();
-  const users = await features.query;
-
+  const usersData = await features.query;
+  const professeurDetails = await Professeur.find({
+    user: {
+      $in: usersData
+        .filter((user) => user.role === "professeur")
+        .map((user) => user._id),
+    },
+  });
+  const users = usersData.map((user) => {
+    if (user.role === "professeur") {
+      const prof = professeurDetails.find((prof) =>
+        prof.user._id.equals(user._id)
+      );
+      let professeur = {
+        _id: prof._id,
+        accountNumero: prof.accountNumero,
+        banque: prof.banque,
+        user: prof.user._id,
+      };
+      return { ...user._doc, professeur };
+    }
+    return user;
+  });
   res.status(200).json({
     status: "succés",
 
@@ -50,8 +72,16 @@ exports.deleteAllUsers = catchAsync(async (req, res, next) => {
 });
 // 3) Create new User
 exports.addUser = catchAsync(async (req, res, next) => {
-  const fileName = req.file ? req.file.filename : "";
+  const fileName = req.file != undefined ? req.file.filename : "";
   const basePath = `${req.protocol}://${req.get("host")}/uploads/images/`;
+  if (req.body.role === "professeur") {
+    const prof = await Professeur.findOne({
+      accountNumero: req.body.accountNumero,
+    });
+    if (prof) {
+      return next(new AppError("Le numero de compte n'est pas valide !", 404));
+    }
+  }
   const user = await User.create({
     nom: req.body.nom,
     prenom: req.body.prenom,
@@ -63,7 +93,19 @@ exports.addUser = catchAsync(async (req, res, next) => {
     passwordChangedAt: req.body.passwordChangedAt,
     role: req.body.role,
   });
-
+  if (user && user.role === "professeur") {
+    const professeur = await Professeur.create({
+      user: user._id,
+      banque: req.body.banque,
+      accountNumero: req.body.accountNumero,
+    });
+    if (!professeur) {
+      await User.findOneAndDelete({ _id: user._id });
+      return next(
+        new AppError("Le donne de professeur n'est pas valide !", 404)
+      );
+    }
+  }
   res.status(200).json({
     status: "succés",
     message: `L'utilisateur est ajouter avec succés`,
@@ -109,18 +151,13 @@ exports.updateUser = catchAsync(async (req, res, next) => {
   const id = req.params.id;
   const fileName = req.file != undefined ? req.file.filename : "";
   const basePath = `${req.protocol}://${req.get("host")}/uploads/images/`;
-
   const user = await User.findById(id);
   user.prenom = req.body.prenom != undefined ? req.body.prenom : user.prenom;
   user.nom = req.body.nom != undefined ? req.body.nom : user.nom;
   user.mobile = req.body.mobile != undefined ? req.body.mobile : user.mobile;
   user.email = req.body.email != undefined ? req.body.email : user.email;
   user.photo = req.file != undefined ? `${basePath}${fileName}` : user.photo;
-  /*   user.banque = req.body.banque != undefined ? req.body.banque : user.banque;
-  user.accountNumero =
-    req.body.accountNumero != undefined
-      ? req.body.accountNumero
-      : user.accountNumero; */
+
   const oldValidateBeforeSave = User.schema.options.validateBeforeSave;
   console.log(oldValidateBeforeSave);
   User.schema.options.validateBeforeSave = false;
@@ -129,7 +166,20 @@ exports.updateUser = catchAsync(async (req, res, next) => {
   } finally {
     User.schema.options.validateBeforeSave = oldValidateBeforeSave;
   }
-
+  if (user && user.role === "professeur") {
+    const professeur = await Professeur.findOne({ user: user._id });
+    if (!professeur) {
+      await User.findOneAndDelete({ _id: user._id });
+      return next(new AppError("Le professeur n'est existe pas !", 404));
+    }
+    professeur.banque =
+      req.body.banque != undefined ? req.body.banque : professeur.banque;
+    professeur.accountNumero =
+      req.body.accountNumero != undefined
+        ? req.body.accountNumero
+        : professeur.accountNumero;
+    await professeur.save();
+  }
   res.status(201).json({
     status: "succés",
     message: ` L'utilisateur est modifié  avec succés !`,

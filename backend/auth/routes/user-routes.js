@@ -12,7 +12,7 @@ const storage = multer.diskStorage({
     const fileName = file.originalname.split(" ").join("-");
     const extention = file.originalname.split(".")[1];
     const uniqueSuffix = Date.now();
-    cb(null, fileName + "_" + uniqueSuffix + "." + extention);
+    cb(null, fileName + "." + extention);
   },
 });
 

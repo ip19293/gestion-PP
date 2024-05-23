@@ -19,6 +19,10 @@ const userSchema = mongoose.Schema({
     type: Number,
     required: [true, "Le numéro de téléphone est reauis !"],
     unique: true,
+    minLength: [
+      8,
+      "Le numéro de telephonne doit avoir une longueur  plus ou egale a 10 chiffres ",
+    ],
   },
   email: {
     type: String,
@@ -135,9 +139,11 @@ userSchema.methods.getProfesseur = async function () {
   try {
     const professeur = await Professeur.findOne({ user: this._id });
     return professeur;
-  } catch (error) {}
+  } catch (error) {
+    console.log(error);
+  }
 };
-/* ---------------------------------------------------------------------------------- */
+//post findOneAndDelete midlweere ------------------------------------------------------------------------------------
 userSchema.post("findOneAndDelete", async function (user) {
   console.log(" user remove midleweere work ....................");
   const Cours = require("../../models/cours");
