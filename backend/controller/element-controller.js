@@ -145,7 +145,105 @@ exports.getElement = catchAsync(async (req, res, next) => {
     element: element,
   });
 });
+//add groupes
+exports.addGroupesToElement = catchAsync(async (req, res, next) => {
+  const id = req.params.id;
+  const element = await Element.findById(id);
+  if (!element) {
+    return next(
+      new AppError("Aucune matière trouvée avec cet identifiant !", 404)
+    );
+  }
 
+  if (req.body.TP == undefined) {
+    req.body.TP =
+      req.body["TP/TD"] != undefined
+        ? req.body["TP/TD"]
+        : req.body.TD != undefined
+        ? req.body.TD
+        : undefined;
+  }
+  if (req.body.TD == undefined) {
+    req.body.TD =
+      req.body["TP/TD"] != undefined
+        ? req.body["TP/TD"]
+        : req.body.TP != undefined
+        ? req.body.TP
+        : undefined;
+  }
+  const type = ["CM", "TD", "TP"];
+  for (let t = 0; t < type.length; t++) {
+    let data = [];
+    const result = checkDuplicatesOrZero(
+      req.body[type[t]] ? req.body[type[t]][0]?.groupe : [],
+      req.body[type[t]] ? req.body[type[t]][1]?.groupe : [],
+
+      req.body[type[t]] && req.body[type[t]][2]
+        ? req.body[type[t]][2]?.groupe
+        : [],
+      req.body[type[t]] && req.body[type[t]][3]
+        ? req.body[type[t]][3]?.groupe
+        : []
+    );
+    if (result.hasDuplicate) {
+      console.log("Has duplicate:", result.hasDuplicate);
+      return next(
+        new AppError("On peut pas avoir deux groupes avec memes numero!", 404)
+      );
+    }
+    if (result.hasZero) {
+      console.log("Has zero:", result.hasZero);
+      return next(
+        new AppError("On peut pas avoir un groupe avec  numero zero !", 404)
+      );
+    }
+    for (let i = 0; i < req.body[type[t]]?.length; i++) {
+      for (let g = 0; g < req.body[type[t]][i].groupe.length; g++) {
+        let dt = {
+          groupe:
+            element["professeur" + [type[t]]][i]._id +
+            "-" +
+            req.body[type[t]][i].groupe[g],
+          professeur: element["professeur" + [type[t]]][i]._id,
+        };
+        // data.push(dt);
+        data.push(
+          element["professeur" + [type[t]]][i]._id +
+            "-" +
+            req.body[type[t]][i].groupe[g]
+        );
+      }
+    }
+    const professeurCount = {};
+    let groupe = [];
+    data.forEach((cmItem, index) => {
+      //  let groupeData = cmItem.groupe.split("-");
+      let groupeData = cmItem.split("-");
+      let professeur = groupeData[0];
+      let nb = groupeData[1];
+      if (professeur) {
+        if (!professeurCount[professeur]) {
+          professeurCount[professeur] = 0;
+        }
+        professeurCount[professeur] += 1;
+        let numero = parseInt(nb);
+        //  console.log(numero);
+
+        // cmItem.groupe =
+        // `${professeur}-${professeurCount[professeur]}` + `-` + numero;
+        cmItem = `${professeur}-${professeurCount[professeur]}` + `-` + numero;
+        groupe.push(cmItem);
+      }
+    });
+    element[type[t]] = groupe;
+  }
+  await element.save();
+  res.status(201).json({
+    status: "succés",
+    message: "L'element est modifié avec succés .",
+    element,
+  });
+});
 // ADD ELEMENT TO PROFESSEUR =====================================================================
 exports.addProfesseurToElements = catchAsync(async (req, res, next) => {
   const id = req.params.id;
@@ -399,3 +497,24 @@ exports.getElementProfesseursByType = catchAsync(async (req, res, next) => {
 
   let type = req.body.type;
 });
+function checkDuplicatesOrZero(...arrays) {
+  const combinedArray = arrays.flat(); // Flatten the arrays into a single array
+  const seen = new Set();
+  let hasDuplicate = false;
+  let hasZero = false;
+
+  for (const element of combinedArray) {
+    if (element === 0) {
+      hasZero = true;
+    }
+    if (seen.has(element)) {
+      hasDuplicate = true;
+    }
+    seen.add(element);
+  }
+
+  return {
+    hasDuplicate,
+    hasZero,
+  };
+}

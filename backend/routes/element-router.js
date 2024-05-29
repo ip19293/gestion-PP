@@ -48,6 +48,9 @@ elementRouter
 elementRouter
   .route("/:id/professeurs")
   .patch(authController.protect, elementController.addProfesseurToElements);
+elementRouter
+  .route("/:id/affectation")
+  .post(authController.protect, elementController.addGroupesToElement);
 
 elementRouter
   .route("/upload/:id")

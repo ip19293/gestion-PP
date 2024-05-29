@@ -34,23 +34,35 @@ const elementSchema = mongoose.Schema(
     heuresCM: { type: Number, default: 32 },
     heuresTP: { type: Number, default: 12 },
     heuresTD: { type: Number, default: 22 },
-    groupeCM: [
-      {
-        type: String,
-        lowercase: true,
-      },
+    CM: [
+      String,
+      /*   {
+        groupe: String,
+        professeur: {
+          type: mongoose.Schema.ObjectId,
+          ref: "Professeur",
+        },
+      }, */
     ],
-    groupeTP: [
-      {
-        type: String,
-        lowercase: true,
-      },
+    TP: [
+      String,
+      /*    {
+        groupe: String,
+        professeur: {
+          type: mongoose.Schema.ObjectId,
+          ref: "Professeur",
+        },
+      }, */
     ],
-    groupeTD: [
-      {
-        type: String,
-        lowercase: true,
-      },
+    TD: [
+      String,
+      /*    {
+        groupe: String,
+        professeur: {
+          type: mongoose.Schema.ObjectId,
+          ref: "Professeur",
+        },
+      }, */
     ],
 
     categorie: {
@@ -182,37 +194,45 @@ elementSchema.pre("save", async function (next) {
   next();
 });
 elementSchema.pre("save", function (next) {
+  //console.log(this.isNew);
   try {
-    const type = ["CM", "TD", "TP"];
-    for (let t = 0; t < type.length; t++) {
-      let data = [];
-      for (let i = 0; i < this["professeur" + [type[t]]].length; i++) {
-        /*    let dt = {
-        groupe: this.professeurCM[i] + "-" + i,
-        professeur: this.professeurCM[i],
-      }; */
-        data.push(this["professeur" + [type[t]]][i] + "-" + i);
-      }
-      const professeurCount = {};
-      let groupe = [];
-      data.forEach((cmItem, index) => {
-        let groupeData = cmItem.split("-");
-        let professeur = groupeData[0];
-        let nb = groupeData[1];
-        if (professeur) {
-          if (!professeurCount[professeur]) {
-            professeurCount[professeur] = 0;
-          }
-          professeurCount[professeur] += 1;
-          let numero = parseInt(nb) + 1;
-          //  console.log(numero);
-
-          cmItem =
-            `${professeur}-${professeurCount[professeur]}` + `-` + numero;
-          groupe.push(cmItem);
+    if (this.isNew) {
+      const type = ["CM", "TD", "TP"];
+      for (let t = 0; t < type.length; t++) {
+        let data = [];
+        for (let i = 0; i < this["professeur" + [type[t]]].length; i++) {
+          let dt = {
+            groupe: this["professeur" + [type[t]]][i]._id + "-" + i,
+            professeur: this["professeur" + [type[t]]][i]._id,
+          };
+          /*      data.push(dt); */
+          data.push(this["professeur" + [type[t]]][i]._id + "-" + i);
         }
-      });
-      this["groupe" + [type[t]]] = groupe;
+
+        const professeurCount = {};
+        let groupe = [];
+        data.forEach((cmItem, index) => {
+          /*           let groupeData = cmItem.groupe.split("-"); */
+          let groupeData = cmItem.split("-");
+          let professeur = groupeData[0];
+          let nb = groupeData[1];
+          if (professeur) {
+            if (!professeurCount[professeur]) {
+              professeurCount[professeur] = 0;
+            }
+            professeurCount[professeur] += 1;
+            let numero = parseInt(nb) + 1;
+            //  console.log(numero);
+            /* 
+            cmItem.groupe =
+              `${professeur}-${professeurCount[professeur]}` + `-` + numero; */
+            cmItem =
+              `${professeur}-${professeurCount[professeur]}` + `-` + numero;
+            groupe.push(cmItem);
+          }
+        });
+        this[[type[t]]] = groupe;
+      }
     }
 
     next();
