@@ -81,7 +81,7 @@ const emploiSchema = mongoose.Schema({
 /* ===================================================================== save  midelwere ======================== */
 emploiSchema.pre("save", async function (next) {
   const element = await Element.findById(this.element);
-  const groupes = element["groupe" + this.type];
+  const groupes = element[this.type];
   for (let i = 0; i < groupes.length; i++) {
     if (groupes[i] === this.groupe) {
       let groupeData = groupes[i].split("-");
