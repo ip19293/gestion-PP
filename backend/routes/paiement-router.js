@@ -43,6 +43,13 @@ paiementRouter
     paiementController.Confirmation
   );
 paiementRouter
+  .route("/statistique")
+  .get(
+    authController.protect,
+    authController.restricTo("admin"),
+    paiementController.Statistique
+  );
+paiementRouter
   .route("/:id")
   .delete(
     authController.protect,

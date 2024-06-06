@@ -40,7 +40,11 @@ const coursSchema = mongoose.Schema(
       ref: "Professeur",
       required: [true, "professeur est requis"],
     },
-
+    groupe: {
+      type: String,
+      lowercase: true,
+      required: [true, "groupe est requis !"],
+    },
     element: {
       type: mongoose.Schema.ObjectId,
       ref: "Element",
@@ -218,5 +222,4 @@ coursSchema.methods.getTHSomme = async function () {
     console.log(error);
   }
 };
-
 module.exports = mongoose.model("Cours", coursSchema);

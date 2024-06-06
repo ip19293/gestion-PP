@@ -58,48 +58,47 @@ exports.addCours = catchAsync(async (req, res, next) => {
   }
 
   const element = await Element.findById(req.body.element);
-
   if (!element) {
     return next(
       new AppError("Aucune element trouvée avec cet identifiant !", 404)
     );
-  }
-  if (element["heures" + req.body.type] === 0) {
-    return next(
-      new AppError(
-        ` Le nombre des heures de ${req.body.type} de cet element sont terminer !`,
-        404
-      )
-    );
-  }
-  let professeurs = element["professeur" + req.body.type];
-  let elements = await Element.find({
-    _id: req.body.element,
-    professeurCM: { $in: [req.body.professeur] },
-  });
-  console.log(elements.length);
-  /* 
-  const professeur_elm = await Professeur.findById(type);
-  let query = professeur_elm
-    ? { element: req.body.element, date: req.body.date }
-    : {
-        professeur: req.body.professeur,
-        date: req.body.date,
-      };
-  if (!professeur_elm) {
-       const professeur = await Professeur.findById(req.body.professeur);
-    if (!professeur) {
-      return next(
-        new AppError("Aucune enseignant trouvée avec cet identifiant !", 404)
-      );
+  } else {
+    let gps = element[req.body.type];
+    let gp = gps.find((el) => el === req.body.groupe);
+    if (!gp) {
+      return next(new AppError("Aucune groupe trouvée avec ce numero !", 404));
     }
-    return next(
-      new AppError(
-        `Il n'y a pas de professeur  ${req.body.type} de cette élément  !`,
-        404
-      )
-    );
-  } */
+    const gp_cours = await Cours.aggregate([
+      {
+        $match: {
+          groupe: req.body.groupe,
+          isSigned: "effectué",
+        },
+      },
+      {
+        $group: {
+          _id: null,
+          nbh: { $sum: "$nbh" },
+        },
+      },
+      {
+        $project: {
+          nbh: 1,
+        },
+      },
+    ]);
+    if (gp_cours.length > 0) {
+      console.log("nombre heures:" + gp_cours[0].nbh);
+      if (gp_cours[0].nbh >= element["heures" + req.body.type]) {
+        return next(
+          new AppError(
+            ` Le nombre des heures de ${req.body.type} de ce groupe sont terminer !`,
+            404
+          )
+        );
+      }
+    }
+  }
 
   const cours_list = await Cours.find({
     professeur: req.body.professeur,
@@ -119,6 +118,7 @@ exports.addCours = catchAsync(async (req, res, next) => {
     date: req.body.date,
     startTime: req.body.startTime,
     professeur: req.body.professeur,
+    groupe: req.body.groupe,
     element: req.body.element,
   });
 
@@ -143,6 +143,42 @@ exports.updateCours = async (req, res, next) => {
     return next(
       new AppError("Aucune element trouvée avec cet identifiant !", 404)
     );
+  } else {
+    let gps = element[req.body.type];
+    let gp = gps.find((el) => el === req.body.groupe);
+    if (!gp) {
+      return next(new AppError("Aucune groupe trouvée avec ce numero !", 404));
+    }
+    const gp_cours = await Cours.aggregate([
+      {
+        $match: {
+          groupe: req.body.groupe,
+          isSigned: "effectué",
+        },
+      },
+      {
+        $group: {
+          _id: null,
+          nbh: { $sum: "$nbh" },
+        },
+      },
+      {
+        $project: {
+          nbh: 1,
+        },
+      },
+    ]);
+    if (gp_cours.length > 0) {
+      console.log("nombre heures:" + gp_cours[0].nbh);
+      if (gp_cours[0].nbh >= element["heures" + req.body.type]) {
+        return next(
+          new AppError(
+            ` Le nombre des heures de ${req.body.type} de ce groupe sont terminer !`,
+            404
+          )
+        );
+      }
+    }
   }
   let query = {
     _id: { $ne: id },
@@ -161,6 +197,7 @@ exports.updateCours = async (req, res, next) => {
   cours.date = req.body.date;
   cours.startTime = req.body.startTime;
   cours.professeur = req.body.professeur;
+  cours.groupe = req.body.groupe;
   cours.element = req.body.element;
 
   await cours.save();
@@ -214,12 +251,36 @@ exports.signeCours = async (req, res, next) => {
     let type = "heures" + cours_sign.type;
     let element = await Element.findById(cours_sign.element);
     if (element) {
-      await Element.findByIdAndUpdate(cours_sign.element, {
-        [type]:
-          element[type] - cours_sign.nbh >= 0
-            ? element[type] - cours_sign.nbh
-            : 0,
-      });
+      const gp_cours = await Cours.aggregate([
+        {
+          $match: {
+            groupe: cours_sign.groupe,
+            isSigned: "effectué",
+          },
+        },
+        {
+          $group: {
+            _id: null,
+            nbh: { $sum: "$nbh" },
+          },
+        },
+        {
+          $project: {
+            nbh: 1,
+          },
+        },
+      ]);
+      if (gp_cours.length > 0) {
+        console.log("nombre heures:" + gp_cours[0].nbh);
+        if (gp_cours[0].nbh >= element["heures" + cours_sign.type]) {
+          return next(
+            new AppError(
+              ` Le nombre des heures de ${req.body.type} de ce groupe sont terminer !`,
+              404
+            )
+          );
+        }
+      }
     }
     query = {
       isSigned: "effectué",
@@ -227,13 +288,6 @@ exports.signeCours = async (req, res, next) => {
     };
   } else {
     if (req.user.role === "admin") {
-      let type = "heures" + cours_sign.type;
-      let element = await Element.findById(cours_sign.element);
-      if (element) {
-        await Element.findByIdAndUpdate(cours_sign.element, {
-          [type]: element[type] + cours_sign.nbh,
-        });
-      }
       query =
         req.user.role === "admin"
           ? {
@@ -408,3 +462,76 @@ exports.getCoursByProfesseursId = catchAsync(async (req, res, next) => {
     total, */
   });
 });
+
+exports.getMonthlyCourseCountByProfessor = catchAsync(
+  async (req, res, next) => {
+    const result = await Cours.aggregate([
+      // Add a new field for month and year extracted from the date
+      {
+        $addFields: {
+          month: { $month: "$date" },
+          year: { $year: "$date" },
+        },
+      },
+      // Group by professor, year, and month, and count the number of courses
+      {
+        $group: {
+          _id: {
+            professeur: "$professeur",
+            year: "$year",
+            month: "$month",
+          },
+
+          nbc: { $sum: 1 },
+          nbh: { $sum: "$nbh" },
+          th: { $sum: "$th" },
+          somme: { $sum: "$somme" },
+        },
+      },
+      {
+        $sort: {
+          professeur: 1,
+          year: 1,
+          month: 1,
+        },
+      },
+
+      {
+        $lookup: {
+          from: "professeurs",
+          localField: "_id.professeur",
+          foreignField: "_id",
+          as: "professeurData",
+        },
+      },
+      { $unwind: "$professeurData" },
+      {
+        $lookup: {
+          from: "users",
+          localField: "professeurData.user",
+          foreignField: "_id",
+          as: "userData",
+        },
+      },
+      { $unwind: "$userData" },
+      {
+        $project: {
+          _id: 0,
+          year: "$_id.year",
+          month: "$_id.month",
+          nbc: 1,
+          nbh: 1,
+          th: 1,
+          somme: 1,
+          nom: "$userData.nom",
+          prenom: "$userData.prenom",
+        },
+      },
+    ]);
+
+    res.status(200).json({
+      status: "succès",
+      result,
+    });
+  }
+);

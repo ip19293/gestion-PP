@@ -3,8 +3,10 @@ const APIFeatures = require("../utils/apiFeatures");
 const Paiement = require("../models/paiement");
 const Cours = require("../models/cours");
 const Professeur = require("../models/professeur");
+const User = require("../auth/models/user");
 const catchAsync = require("../utils/catchAsync");
 const AppError = require("../utils/appError");
+const professeur = require("../models/professeur");
 const filterOb = (obj, ...allowedFields) => {
   const newObj = {};
   Object.keys(obj).forEach((el) => {
@@ -28,7 +30,7 @@ exports.getPaiements = catchAsync(async (req, res, next) => {
       ? paiement.professeur.accountNumero
       : null,
   }));
-  let paiements_vide = await Paiement.find({ confirmation: "vide" });
+  let paiements_vide = await Paiement.find({ confirmation: "en attente" });
   res.status(200).json({
     status: "success",
     nb_vide: paiements_vide.length,
@@ -350,7 +352,7 @@ exports.getPaiementsByProfesseurId = catchAsync(async (req, res, next) => {
   }
   let query =
     req.body.notification !== undefined
-      ? { professeur: id, confirmation: "vide" }
+      ? { professeur: id, confirmation: "en attente" }
       : { professeur: id, confirmation: "accepté" };
   const paiements = await Paiement.find(query);
   res.status(200).json({
@@ -433,5 +435,39 @@ exports.Confirmation = catchAsync(async (req, res, next) => {
     message: message,
   });
 });
-
+exports.Statistique = catchAsync(async (req, res, next) => {
+  const users = await User.find();
+  const active_users = await User.find({ active: true });
+  let id = req.params.id;
+  let cours_news = await Cours.find({
+    isSigned: "en attente",
+  });
+  let paiement_news = await Paiement.find({ confirmation: "en attente" });
+  let cours_effectue = await Cours.find({ isSigned: "effectué" });
+  let paiement_effectue = await Paiement.find({ confirmation: "accepté" });
+  if (id != undefined) {
+    cours_news = await Cours.find({
+      isSigned: "en attente",
+      professeur: id,
+    });
+    paiement_news = await Paiement.find({
+      confirmation: "en attente",
+      professeur: id,
+    });
+    cours_effectue = await Cours.find({ isSigned: "effectué", professeur: id });
+    paiement_effectue = await Paiement.find({
+      confirmation: "accepté",
+      professeur: id,
+    });
+  }
+  res.status(201).json({
+    status: "success",
+    users: users.length,
+    active_users: active_users.length,
+    cours_en_attente: cours_news.length,
+    cours_effectue: cours_effectue.length,
+    paiement_effectue: paiement_effectue.length,
+    paiement_en_attente: paiement_news.length,
+  });
+});
 /* -----------------------------------------------------FONCTIONS------------------------ */

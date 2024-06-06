@@ -54,8 +54,8 @@ const paiementSchema = mongoose.Schema(
     },
     confirmation: {
       type: String,
-      default: "vide",
-      enum: ["vide", "accepté", "refusé"],
+      default: "en attente",
+      enum: ["en attente", "accepté", "refusé"],
     },
     message: {
       type: String,
@@ -76,12 +76,12 @@ const paiementSchema = mongoose.Schema(
 paiementSchema.pre("validate", async function (next) {
   try {
     if (
-      ["vide", "refusé"].includes(this.confirmation) &&
+      ["en attente", "refusé"].includes(this.confirmation) &&
       ["validé", "terminé"].includes(this.status)
     ) {
       return next(
         new AppError(
-          "Paiement vide ou refusé ne peut pas étre validé ou  terminé ....",
+          "Paiement en attente ou refusé ne peut pas étre validé ou  terminé ....",
           404
         )
       );

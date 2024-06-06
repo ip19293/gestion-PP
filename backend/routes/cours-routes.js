@@ -20,6 +20,10 @@ CoursRouter.route("/auto-create").get(
   authController.restricTo("admin"),
   createCoursFromEmploiController.auto
 );
+CoursRouter.route("/monthly-by-professeur").get(
+  authController.protect,
+  courController.getMonthlyCourseCountByProfessor
+);
 CoursRouter.route("/signe-professeur/:id").get(
   courController.getSignedCoursByProfesseurId,
   courController.getCours
@@ -31,6 +35,7 @@ CoursRouter.route("/non-signe-professeur/:id").post(
 CoursRouter.route("/professeur/:id")
   .get(courController.getAllCoursProf, courController.getCours)
   .post(authController.protect, courController.getCoursByProfesseursId);
+
 CoursRouter.route("/:id/signe").patch(
   authController.protect,
   courController.signeCours
