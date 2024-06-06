@@ -439,13 +439,16 @@ exports.Statistique = catchAsync(async (req, res, next) => {
   const users = await User.find();
   const active_users = await User.find({ active: true });
   let id = req.params.id;
+  let cours_total = await Cours.find();
   let cours_news = await Cours.find({
     isSigned: "en attente",
   });
+
   let paiement_news = await Paiement.find({ confirmation: "en attente" });
   let cours_effectue = await Cours.find({ isSigned: "effectué" });
   let paiement_effectue = await Paiement.find({ confirmation: "accepté" });
   if (id != undefined) {
+    cours_total = await Cours.find({ professeur: id });
     cours_news = await Cours.find({
       isSigned: "en attente",
       professeur: id,
@@ -464,6 +467,7 @@ exports.Statistique = catchAsync(async (req, res, next) => {
     status: "success",
     users: users.length,
     active_users: active_users.length,
+    cours_total: cours_total.length,
     cours_en_attente: cours_news.length,
     cours_effectue: cours_effectue.length,
     paiement_effectue: paiement_effectue.length,

@@ -44,6 +44,7 @@ const createCoursFromGroupEmplois = async () => {
           date: date,
           startTime: x.startTime,
           professeur: x.professeur,
+          groupe: x.groupe,
           element: x.element,
         });
         added_cours.push(cours);

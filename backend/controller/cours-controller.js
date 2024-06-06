@@ -466,7 +466,11 @@ exports.getCoursByProfesseursId = catchAsync(async (req, res, next) => {
 exports.getMonthlyCourseCountByProfessor = catchAsync(
   async (req, res, next) => {
     const result = await Cours.aggregate([
-      // Add a new field for month and year extracted from the date
+      {
+        $match: {
+          isSigned: "effectué",
+        },
+      },
       {
         $addFields: {
           month: { $month: "$date" },
