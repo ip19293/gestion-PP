@@ -9,7 +9,7 @@ const mongoose = require("mongoose");
 const catchAsync = require("../utils/catchAsync");
 const AppError = require("../utils/appError");
 const VERIFICATION = require("./functions/verificatin");
-const emploi = require("../models/emploi");
+const Cours = require("../models/cours");
 exports.getEmplois = catchAsync(async (req, res, next) => {
   let filter = {};
   if (req.params.id) filter = { emplois: req.params.id };
@@ -155,6 +155,42 @@ exports.addEmploi = catchAsync(async (req, res, next) => {
         )
       );
     }
+    //verification de nombres d'heures par type d'emploi
+    let gps = element[req.body.type];
+    let gp = gps.find((el) => el === req.body.groupe);
+    if (!gp) {
+      return next(new AppError("Aucune groupe trouvée avec ce numero !", 404));
+    }
+    const gp_cours = await Cours.aggregate([
+      {
+        $match: {
+          groupe: req.body.groupe,
+          isSigned: "effectué",
+        },
+      },
+      {
+        $group: {
+          _id: null,
+          nbh: { $sum: "$nbh" },
+        },
+      },
+      {
+        $project: {
+          nbh: 1,
+        },
+      },
+    ]);
+    if (gp_cours.length > 0) {
+      console.log("nombre heures:" + gp_cours[0].nbh);
+      if (gp_cours[0].nbh >= element["heures" + req.body.type]) {
+        return next(
+          new AppError(
+            ` Le nombre des heures de ${req.body.type} de ce groupe sont terminer !`,
+            404
+          )
+        );
+      }
+    }
   }
 
   const cours_list = await Emploi.find({
@@ -196,23 +232,52 @@ exports.addManyEmploi = catchAsync(async (req, res, next) => {
           el.equals(new mongoose.Types.ObjectId(prof_id))
         );
         if (prof) {
-          const cours_list = await Emploi.find({
-            professeur: prof_id,
-            dayNumero: emploi.dayNumero,
-          });
-          const result_prof = VERIFICATION(emploi, cours_list, "enseigant");
-          if (result_prof[0] != "failed") {
-            let new_emploi = new Emploi({
-              type: emploi.type,
-              nbh: emploi.nbh,
-              startTime: emploi.startTime,
-              element: emploi.element,
-              dayNumero: emploi.dayNumero,
-              groupe: emploi.groupe,
-            });
-            new_emploi = await new_emploi.save();
-            if (new_emploi) {
-              emplois.push(new_emploi);
+          let gps = element[emploi.type];
+          let gp = gps.find((el) => el === emploi.groupe);
+          if (gp) {
+            const gp_cours = await Cours.aggregate([
+              {
+                $match: {
+                  groupe: emploi.groupe,
+                  isSigned: "effectué",
+                },
+              },
+              {
+                $group: {
+                  _id: null,
+                  nbh: { $sum: "$nbh" },
+                },
+              },
+              {
+                $project: {
+                  nbh: 1,
+                },
+              },
+            ]);
+
+            if (
+              gp_cours.length == 0 ||
+              gp_cours[0]?.nbh < element["heures" + emploi.type]
+            ) {
+              const cours_list = await Emploi.find({
+                professeur: prof_id,
+                dayNumero: emploi.dayNumero,
+              });
+              const result_prof = VERIFICATION(emploi, cours_list, "enseigant");
+              if (result_prof[0] != "failed") {
+                let new_emploi = new Emploi({
+                  type: emploi.type,
+                  nbh: emploi.nbh,
+                  startTime: emploi.startTime,
+                  element: emploi.element,
+                  dayNumero: emploi.dayNumero,
+                  groupe: emploi.groupe,
+                });
+                new_emploi = await new_emploi.save();
+                if (new_emploi) {
+                  emplois.push(new_emploi);
+                }
+              }
             }
           }
         }
@@ -263,6 +328,42 @@ exports.updateEmploi = async (req, res, next) => {
           404
         )
       );
+    }
+    //verification de nombres d'heures par type d'emploi
+    let gps = element[req.body.type];
+    let gp = gps.find((el) => el === req.body.groupe);
+    if (!gp) {
+      return next(new AppError("Aucune groupe trouvée avec ce numero !", 404));
+    }
+    const gp_cours = await Cours.aggregate([
+      {
+        $match: {
+          groupe: req.body.groupe,
+          isSigned: "effectué",
+        },
+      },
+      {
+        $group: {
+          _id: null,
+          nbh: { $sum: "$nbh" },
+        },
+      },
+      {
+        $project: {
+          nbh: 1,
+        },
+      },
+    ]);
+    if (gp_cours.length > 0) {
+      console.log("nombre heures:" + gp_cours[0].nbh);
+      if (gp_cours[0].nbh >= element["heures" + req.body.type]) {
+        return next(
+          new AppError(
+            ` Le nombre des heures de ${req.body.type} de ce groupe sont terminer !`,
+            404
+          )
+        );
+      }
     }
   }
   const cours_list = await Emploi.find({
