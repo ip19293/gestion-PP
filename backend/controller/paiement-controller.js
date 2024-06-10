@@ -437,6 +437,7 @@ exports.Confirmation = catchAsync(async (req, res, next) => {
 });
 exports.Statistique = catchAsync(async (req, res, next) => {
   const users = await User.find();
+  const professeurs = await Professeur.find();
   const active_users = await User.find({ active: true });
   let id = req.params.id;
   let cours_total = await Cours.find();
@@ -466,6 +467,7 @@ exports.Statistique = catchAsync(async (req, res, next) => {
   res.status(201).json({
     status: "success",
     users: users.length,
+    professeurs: professeurs.length,
     active_users: active_users.length,
     cours_total: cours_total.length,
     cours_en_attente: cours_news.length,

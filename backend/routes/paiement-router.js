@@ -50,6 +50,9 @@ paiementRouter
     paiementController.Statistique
   );
 paiementRouter
+  .route("/statistique/:id")
+  .get(authController.protect, paiementController.Statistique);
+paiementRouter
   .route("/:id")
   .delete(
     authController.protect,

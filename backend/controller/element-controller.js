@@ -140,9 +140,11 @@ exports.getElement = catchAsync(async (req, res, next) => {
       new AppError("Aucune matière trouvée avec cet identifiant !", 404)
     );
   }
+  const groupes = await element.getGroupDetails();
   res.status(200).json({
     status: "succés",
     element: element,
+    groupes,
   });
 });
 //add groupes

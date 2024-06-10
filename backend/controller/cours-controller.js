@@ -4,6 +4,7 @@ const Professeur = require("../models/professeur");
 const Element = require("../models/element");
 const catchAsync = require("../utils/catchAsync");
 const AppError = require("../utils/appError");
+const mongoose = require("mongoose");
 const VERIFICATION = require("./functions/verificatin");
 exports.getCours = catchAsync(async (req, res, next) => {
   let filter = {};
@@ -465,11 +466,9 @@ exports.getCoursByProfesseursId = catchAsync(async (req, res, next) => {
 
 exports.getMonthlyCourseCountByProfessor = catchAsync(
   async (req, res, next) => {
-    const result = await Cours.aggregate([
+    let result = await Cours.aggregate([
       {
-        $match: {
-          isSigned: "effectué",
-        },
+        $match: { isSigned: "effectué" },
       },
       {
         $addFields: {
@@ -477,7 +476,6 @@ exports.getMonthlyCourseCountByProfessor = catchAsync(
           year: { $year: "$date" },
         },
       },
-      // Group by professor, year, and month, and count the number of courses
       {
         $group: {
           _id: {
@@ -532,6 +530,76 @@ exports.getMonthlyCourseCountByProfessor = catchAsync(
         },
       },
     ]);
+    if (req.params.id) {
+      console.log(req.params.id);
+      result = await Cours.aggregate([
+        {
+          $match: {
+            isSigned: "effectué",
+            professeur: new mongoose.Types.ObjectId(req.params.id),
+          },
+        },
+        {
+          $addFields: {
+            month: { $month: "$date" },
+            year: { $year: "$date" },
+          },
+        },
+        {
+          $group: {
+            _id: {
+              professeur: "$professeur",
+              year: "$year",
+              month: "$month",
+            },
+
+            nbc: { $sum: 1 },
+            nbh: { $sum: "$nbh" },
+            th: { $sum: "$th" },
+            somme: { $sum: "$somme" },
+          },
+        },
+        {
+          $sort: {
+            professeur: 1,
+            year: 1,
+            month: 1,
+          },
+        },
+
+        {
+          $lookup: {
+            from: "professeurs",
+            localField: "_id.professeur",
+            foreignField: "_id",
+            as: "professeurData",
+          },
+        },
+        { $unwind: "$professeurData" },
+        {
+          $lookup: {
+            from: "users",
+            localField: "professeurData.user",
+            foreignField: "_id",
+            as: "userData",
+          },
+        },
+        { $unwind: "$userData" },
+        {
+          $project: {
+            _id: 0,
+            year: "$_id.year",
+            month: "$_id.month",
+            nbc: 1,
+            nbh: 1,
+            th: 1,
+            somme: 1,
+            nom: "$userData.nom",
+            prenom: "$userData.prenom",
+          },
+        },
+      ]);
+    }
 
     res.status(200).json({
       status: "succès",

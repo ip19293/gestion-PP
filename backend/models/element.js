@@ -1,6 +1,7 @@
 const mongoose = require("mongoose");
 const Filiere = require("./filiere");
 const Categorie = require("./categorie");
+const Cours = require("./cours");
 
 const elementSchema = mongoose.Schema(
   {
@@ -34,36 +35,9 @@ const elementSchema = mongoose.Schema(
     heuresCM: { type: Number, default: 32 },
     heuresTP: { type: Number, default: 12 },
     heuresTD: { type: Number, default: 22 },
-    CM: [
-      String,
-      /*   {
-        groupe: String,
-        professeur: {
-          type: mongoose.Schema.ObjectId,
-          ref: "Professeur",
-        },
-      }, */
-    ],
-    TP: [
-      String,
-      /*    {
-        groupe: String,
-        professeur: {
-          type: mongoose.Schema.ObjectId,
-          ref: "Professeur",
-        },
-      }, */
-    ],
-    TD: [
-      String,
-      /*    {
-        groupe: String,
-        professeur: {
-          type: mongoose.Schema.ObjectId,
-          ref: "Professeur",
-        },
-      }, */
-    ],
+    CM: [String],
+    TP: [String],
+    TD: [String],
 
     categorie: {
       type: mongoose.Schema.ObjectId,
@@ -263,6 +237,53 @@ elementSchema.post("findOneAndDelete", async function (element) {
 elementSchema.methods.getPrix = async function () {
   let categorie = await Categorie.findById(this.categorie);
   return categorie.prix;
+};
+
+//GET GROUPE DETAILS -------------------------------------------------
+elementSchema.methods.getGroupDetails = async function () {
+  const cours = await Cours.find({ element: this._id, isSigned: "effectué" });
+
+  const groupDetails = {};
+
+  ["CM", "TP", "TD"].forEach((type) => {
+    const hoursField = `heures${type}`;
+    const profField = `professeur${type}`;
+
+    this[type].forEach((groupe) => {
+      const [profId, profGroupNum, groupNum] = groupe.split("-");
+
+      if (!groupDetails[profId]) {
+        groupDetails[profId] = {
+          CM: { groups: [], totalHours: this.heuresCM, completedHours: {} },
+          TP: { groups: [], totalHours: this.heuresTP, completedHours: {} },
+          TD: { groups: [], totalHours: this.heuresTD, completedHours: {} },
+        };
+      }
+
+      if (!groupDetails[profId][type].completedHours[groupNum]) {
+        groupDetails[profId][type].completedHours[groupNum] = 0;
+      }
+
+      groupDetails[profId][type].groups.push(groupNum);
+    });
+  });
+
+  cours.forEach((cours) => {
+    const [profId, profGroupNum, groupNum] = cours.groupe.split("-");
+    /*     const profId = cours.professeur;
+    const groupNum = cours.groupe.split("-")[2]; */
+    const type = cours.type;
+    console.log(groupDetails[profId][type].completedHours[groupNum]);
+
+    if (
+      groupDetails[profId] &&
+      groupDetails[profId][type].completedHours[groupNum] !== undefined
+    ) {
+      groupDetails[profId][type].completedHours[groupNum] += cours.nbh;
+    }
+  });
+
+  return groupDetails;
 };
 
 module.exports = mongoose.model("Element", elementSchema);

@@ -24,6 +24,10 @@ CoursRouter.route("/monthly-by-professeur").get(
   authController.protect,
   courController.getMonthlyCourseCountByProfessor
 );
+CoursRouter.route("/monthly-by-professeur/:id").get(
+  authController.protect,
+  courController.getMonthlyCourseCountByProfessor
+);
 CoursRouter.route("/signe-professeur/:id").get(
   courController.getSignedCoursByProfesseurId,
   courController.getCours
