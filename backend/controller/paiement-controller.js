@@ -40,6 +40,23 @@ exports.getPaiements = catchAsync(async (req, res, next) => {
 /*  1)============================= terminner ======================================================*/
 exports.terminnation = catchAsync(async (req, res, next) => {
   //change cours status
+  const paiements_vide = await Paiement.findOne({ confirmation: "en attente" });
+  const paiements_accepte = await Paiement.find({
+    confirmation: "accepté",
+    status: "validé",
+  });
+  // if (!paiements_vide) {
+  for (let paiement of paiements_accepte) {
+    await Paiement.findOneAndUpdate(
+      { _id: paiement._id },
+      { status: "terminé" },
+      {
+        new: true,
+        runValidators: true,
+      }
+    );
+    //}
+  }
 
   const features = new APIFeatures(Paiement.find(), req.query);
   const paiementsData = await features.query;
@@ -373,7 +390,7 @@ exports.Confirmation = catchAsync(async (req, res, next) => {
   }
 
   let query =
-    req.body.refuse !== undefined
+    req.body.refuse != undefined
       ? { confirmation: "refusé", message: req.body.message }
       : {
           confirmation: "accepté",
@@ -395,13 +412,14 @@ exports.Confirmation = catchAsync(async (req, res, next) => {
         : `Le paiement est validé avec succés .`;
   } else {
     const currentDate = new Date();
-    currentDate.setDate(currentDate.getDate() - 7);
+    const delai = req.body.expiration ? req.body.expiration : 3;
+    currentDate.setDate(currentDate.getDate() - delai);
     const paiements_expirer = await Paiement.find({
       date: { $lte: currentDate },
     });
 
     await Paiement.updateMany(
-      { confirmation: "vide", date: { $lte: currentDate } },
+      { confirmation: "en attente", date: { $lte: currentDate } },
       query,
       {
         new: true,
@@ -439,7 +457,7 @@ exports.Statistique = catchAsync(async (req, res, next) => {
   const users = await User.find();
   const professeurs = await Professeur.find();
   const active_users = await User.find({ active: true });
-  let id = req.params.id;
+  const id = req.params.id;
   let cours_total = await Cours.find();
   let cours_news = await Cours.find({
     isSigned: "en attente",
@@ -448,7 +466,21 @@ exports.Statistique = catchAsync(async (req, res, next) => {
   let paiement_news = await Paiement.find({ confirmation: "en attente" });
   let cours_effectue = await Cours.find({ isSigned: "effectué" });
   let paiement_effectue = await Paiement.find({ confirmation: "accepté" });
+  let professeur = {};
+  let prof_CM = [];
+  let prof_TP = [];
+  let prof_TD = [];
+  let prof_ALL = [];
+  let groupes = [];
   if (id != undefined) {
+    professeur = await Professeur.findById(id);
+    if (professeur) {
+      prof_CM = await professeur.getElements("CM");
+      prof_TP = await professeur.getElements("TP");
+      prof_TD = await professeur.getElements("TD");
+      prof_ALL = await professeur.getElements();
+      groupes = await professeur.getGroupDetails();
+    }
     cours_total = await Cours.find({ professeur: id });
     cours_news = await Cours.find({
       isSigned: "en attente",
@@ -466,6 +498,12 @@ exports.Statistique = catchAsync(async (req, res, next) => {
   }
   res.status(201).json({
     status: "success",
+    groupes,
+    prof_ALL,
+    prof_ALL: prof_CM.length + prof_TP.length + prof_TD.length,
+    prof_CM: prof_CM.length,
+    prof_TP: prof_TP.length,
+    prof_TD: prof_TD.length,
     users: users.length,
     professeurs: professeurs.length,
     active_users: active_users.length,

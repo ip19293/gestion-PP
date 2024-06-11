@@ -369,6 +369,69 @@ professeurSchema.methods.getPaiements = async function () {
   }));
   return paiements;
 };
+//GET GROUPE DETAILS -------------------------------------------------
+professeurSchema.methods.getGroupDetails = async function () {
+  const Cours = require("./cours");
+  const cours = await Cours.find({
+    professeur: this._id,
+    isSigned: "effectué",
+  });
+
+  const groupDetails = {};
+
+  const elements = await this.getElements();
+  elements.forEach((element) => {
+    ["CM", "TP", "TD"].forEach((type) => {
+      const hoursField = `heures${type}`;
+      const profField = `professeur${type}`;
+      element[type].forEach((groupe) => {
+        const [profId, profGroupNum, groupNum] = groupe.split("-");
+        if (profId === this._id.toString()) {
+          if (!groupDetails[profId]) {
+            groupDetails[profId] = {
+              CM: {
+                groups: [],
+                totalHours: element.heuresCM,
+                completedHours: {},
+              },
+              TP: {
+                groups: [],
+                totalHours: element.heuresTP,
+                completedHours: {},
+              },
+              TD: {
+                groups: [],
+                totalHours: element.heuresTD,
+                completedHours: {},
+              },
+            };
+          }
+
+          if (!groupDetails[profId][type].completedHours[groupNum]) {
+            groupDetails[profId][type].completedHours[groupNum] = 0;
+          }
+
+          groupDetails[profId][type].groups.push(groupNum);
+        }
+      });
+    });
+  });
+
+  cours.forEach((cours) => {
+    const [profId, profGroupNum, groupNum] = cours.groupe.split("-");
+    const type = cours.type;
+    // console.log(groupDetails[profId][type].completedHours[groupNum]);
+
+    if (
+      groupDetails[profId] &&
+      groupDetails[profId][type].completedHours[groupNum] !== undefined
+    ) {
+      groupDetails[profId][type].completedHours[groupNum] += cours.nbh;
+    }
+  });
+
+  return groupDetails[this._id.toString()];
+};
 // functions ----------------------------------------------------------------
 const queryFilter = function (professeur, debit, fin) {
   let debitDate = new Date(debit);

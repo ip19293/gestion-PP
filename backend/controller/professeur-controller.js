@@ -236,6 +236,24 @@ exports.getEmplois = catchAsync(async (req, res, next) => {
     emplois: result,
   });
 });
+///GET PROFESSEUR Groups Details --------------------------------------------------------------------------------------
+exports.getGroupDetails = catchAsync(async (req, res, next) => {
+  const id = req.params.id;
+  console.log(id);
+  const Oldprofesseur = await Professeur.findById(id);
+  if (!Oldprofesseur) {
+    return next(
+      new AppError("Aucun enseignant trouvé avec cet identifiant !", 404)
+    );
+  }
+  let groupes = await Oldprofesseur.getGroupDetails();
+
+  res.status(200).json({
+    status: "succés",
+    professeur: Oldprofesseur,
+    groupes,
+  });
+});
 //GET PAIEMENTS BY PROFESSEUR ID ------------------------------------------------------------------------------
 exports.getPaiements = catchAsync(async (req, res, next) => {
   const id = req.params.id;

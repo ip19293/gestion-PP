@@ -107,7 +107,8 @@ paiementSchema.pre("save", async function (next) {
 //find one and delete mildweere to update liste of cours corespondate ----------------------------------------
 paiementSchema.post("findOneAndDelete", async function (paiement) {
   console.log(" paiement remove midleweere work ....................");
-  let filter = queryFilter(
+  // if paiement deleted before termine
+  const filter = queryFilter(
     paiement.professeur,
     paiement.fromDate,
     paiement.toDate,
@@ -116,6 +117,31 @@ paiementSchema.post("findOneAndDelete", async function (paiement) {
   );
   await Cours.updateMany(filter, {
     $set: { isPaid: "en attente" },
+  });
+  //if paiement deleted affter termine
+  if (paiement.status === "terminé" && paiement.confirmation === "accepté") {
+    const filter2 = queryFilter(
+      paiement.professeur,
+      paiement.fromDate,
+      paiement.toDate,
+      "effectué",
+      "effectué"
+    );
+    await Cours.deleteMany(filter2);
+  }
+});
+//findOneAndUpdate mildweere to update liste of cours corespondate ----------------------------------------
+paiementSchema.post("findOneAndUpdate", async function (paiement) {
+  console.log(" paiement status termine midleweere work ....................");
+  let filter = queryFilter(
+    paiement.professeur,
+    paiement.fromDate,
+    paiement.toDate,
+    "effectué",
+    "préparé"
+  );
+  await Cours.updateMany(filter, {
+    $set: { isPaid: "effectué" },
   });
 });
 paiementSchema.post("save", async function (paiement, next) {

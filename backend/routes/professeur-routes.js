@@ -70,6 +70,9 @@ router
   .route("/:id/emplois")
   .get(authController.protect, professeurController.getEmplois);
 router
+  .route("/:id/groupes")
+  .get(authController.protect, professeurController.getGroupDetails);
+router
   .route("/:id/paiements")
   .get(authController.protect, professeurController.getPaiements);
 router
