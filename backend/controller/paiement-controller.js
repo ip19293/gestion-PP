@@ -45,17 +45,17 @@ exports.terminnation = catchAsync(async (req, res, next) => {
     confirmation: "accepté",
     status: "validé",
   });
-  // if (!paiements_vide) {
-  for (let paiement of paiements_accepte) {
-    await Paiement.findOneAndUpdate(
-      { _id: paiement._id },
-      { status: "terminé" },
-      {
-        new: true,
-        runValidators: true,
-      }
-    );
-    //}
+  if (!paiements_vide) {
+    for (let paiement of paiements_accepte) {
+      await Paiement.findOneAndUpdate(
+        { _id: paiement._id },
+        { status: "terminé" },
+        {
+          new: true,
+          runValidators: true,
+        }
+      );
+    }
   }
 
   const features = new APIFeatures(Paiement.find(), req.query);
